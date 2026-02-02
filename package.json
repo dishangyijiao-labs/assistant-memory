@@ -4,14 +4,14 @@
   "description": "IDE Memory - 记录和管理 IDE 中与 AI 聊天工具的会话内容",
   "main": "backend/src/main.py",
   "scripts": {
-    "dev:backend": "cd backend && python src/main.py",
+    "dev:backend": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python src/main.py",
     "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "cd frontend && npm run build",
-    "install:backend": "cd backend && pip install -r requirements.txt",
+    "install:backend": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
     "install:frontend": "cd frontend && npm install",
-    "init:db": "cd backend && python -c \"from src.utils.database import db; db.create_all(); print('Database initialized')\"",
+    "init:db": "cd backend && source venv/bin/activate && python -c \"from src.utils.database import db; db.create_all(); print('Database initialized')\"",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "start": "npm run build:frontend && npm run dev:backend"
+    "start": "npm run build:frontend && cd backend && source venv/bin/activate && gunicorn -w 4 -b 0.0.0.0:5000 src.main:app"
   },
   "keywords": [
     "IDE",
