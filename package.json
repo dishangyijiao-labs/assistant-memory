@@ -1,0 +1,33 @@
+{
+  "name": "ide-memory",
+  "version": "1.0.0",
+  "description": "IDE Memory - 记录和管理 IDE 中与 AI 聊天工具的会话内容",
+  "main": "backend/src/main.py",
+  "scripts": {
+    "dev:backend": "cd backend && python src/main.py",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "install:frontend": "cd frontend && npm install",
+    "init:db": "cd backend && python -c \"from src.utils.database import db; db.create_all(); print('Database initialized')\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start": "npm run build:frontend && npm run dev:backend"
+  },
+  "keywords": [
+    "IDE",
+    "AI",
+    "chat",
+    "history",
+    "Copilot",
+    "Cursor",
+    "VS Code",
+    "Cloud Code",
+    "CodeX",
+    "Gemini"
+  ],
+  "author": "dishangyijiao",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
