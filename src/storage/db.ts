@@ -116,8 +116,46 @@ export function insertMessage(sessionId: number, m: NormalizedMessage): void {
     .run(sessionId, m.role, m.content, m.timestamp, m.external_id ?? null, now);
 }
 
-export function searchMessages(query: string, limit: number = 50): Array<{ snippet: string; session_id: number; source: string; workspace: string; last_at: number }> {
+export interface MessageResult {
+    snippet: string;
+    session_id: number;
+    source: string;
+    workspace: string;
+    last_at: number;
+}
+
+export function listMessages(
+    limit: number = 50,
+    source?: Source
+  ): MessageResult[] {
+    const database = getDb();
+    const whereSource = source ? "AND s.source = ?" : "";
+    const stmt = database.prepare(`
+      SELECT
+        substr(m.content, 1, 300) AS snippet,
+        m.session_id,
+        s.source,
+        s.workspace,
+        s.last_at
+      FROM messages m
+      JOIN sessions s ON s.id = m.session_id
+      WHERE 1=1 ${whereSource}
+      ORDER BY m.timestamp DESC
+      LIMIT ?
+    `);
+    const params: Array<string | number> = [];
+    if (source) params.push(source);
+    params.push(limit);
+    return stmt.all(...params) as MessageResult[];
+  }
+
+export function searchMessages(
+  query: string,
+  limit: number = 50,
+  source?: Source
+): MessageResult[] {
   const database = getDb();
+  const whereSource = source ? "AND s.source = ?" : "";
   const stmt = database.prepare(`
     SELECT
       snippet(messages_fts, 0, '**', '**', '…', 32) AS snippet,
@@ -128,11 +166,42 @@ export function searchMessages(query: string, limit: number = 50): Array<{ snipp
     FROM messages_fts f
     JOIN messages m ON m.id = f.rowid
     JOIN sessions s ON s.id = m.session_id
-    WHERE messages_fts MATCH ?
+    WHERE messages_fts MATCH ? ${whereSource}
     ORDER BY s.last_at DESC
     LIMIT ?
   `);
-  return stmt.all(query, limit) as Array<{ snippet: string; session_id: number; source: string; workspace: string; last_at: number }>;
+  const params: Array<string | number> = [query];
+  if (source) params.push(source);
+  params.push(limit);
+  return stmt.all(...params) as MessageResult[];
+}
+
+export interface SessionListItem {
+  id: number;
+  source: string;
+  workspace: string;
+  external_id: string;
+  started_at: number;
+  last_at: number;
+  message_count: number;
+}
+
+export function listSessions(opts: { source?: Source; limit?: number; offset?: number } = {}): SessionListItem[] {
+  const database = getDb();
+  const limit = Math.min(500, Math.max(1, opts.limit ?? 100));
+  const offset = Math.max(0, opts.offset ?? 0);
+  if (opts.source) {
+    const stmt = database.prepare(`
+      SELECT id, source, workspace, external_id, started_at, last_at, message_count
+      FROM sessions WHERE source = ? ORDER BY last_at DESC LIMIT ? OFFSET ?
+    `);
+    return stmt.all(opts.source, limit, offset) as SessionListItem[];
+  }
+  const stmt = database.prepare(`
+    SELECT id, source, workspace, external_id, started_at, last_at, message_count
+    FROM sessions ORDER BY last_at DESC LIMIT ? OFFSET ?
+  `);
+  return stmt.all(limit, offset) as SessionListItem[];
 }
 
 export function getStats(): { sessions: number; messages: number } {

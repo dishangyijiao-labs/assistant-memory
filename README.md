@@ -47,6 +47,10 @@ npx assistant-memory search "bug fix" --limit 10
 
 # Stats (DB path and counts)
 npx assistant-memory stats
+
+# Web search (browser UI at http://localhost:3000)
+npx assistant-memory serve
+npx assistant-memory serve --port 4000
 ```
 
 ## Database

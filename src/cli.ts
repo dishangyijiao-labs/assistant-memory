@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { runIngest } from "./ingest/index.js";
 import * as db from "./storage/db.js";
+import { startServer } from "./web/server.js";
 
 const program = new Command();
 
@@ -50,6 +51,15 @@ program
     const stats = db.getStats();
     console.log("Database:", db.getDbPath());
     console.log("Sessions:", stats.sessions, "Messages:", stats.messages);
+  });
+
+program
+  .command("serve")
+  .description("Start web server for search in the browser.")
+  .option("-p, --port <number>", "Port (default 3000)", "3000")
+  .action((opts: { port?: string }) => {
+    const port = parseInt(opts.port ?? "3000", 10) || 3000;
+    startServer(port);
   });
 
 export function run(): void {

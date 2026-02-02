@@ -13,10 +13,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && cp src/storage/schema.sql dist/storage/",
+    "build": "npx tsc && cp src/storage/schema.sql dist/storage/",
+    "postbuild": "node -e \"const fs=require('fs');try{fs.chmodSync('dist/index.js',0o755);}catch(e){if(e.code!=='ENOENT')throw e;}\"",
     "start": "node dist/index.js",
     "index": "node dist/index.js index",
     "search": "node dist/index.js search",
+    "serve": "node dist/index.js serve",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
