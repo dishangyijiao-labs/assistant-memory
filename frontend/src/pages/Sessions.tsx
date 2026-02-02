@@ -8,7 +8,8 @@ import {
   Trash2,
   Clock,
   Code2,
-  MessageSquare
+  MessageSquare,
+  Import
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getSessions } from '@/services/api';
+import ImportDialog from '@/components/ImportDialog';
 
 const Sessions = () => {
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ const Sessions = () => {
   const [filterTool, setFilterTool] = useState('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -103,10 +106,16 @@ const Sessions = () => {
           <h1 className="text-3xl font-bold">会话历史</h1>
           <p className="text-muted-foreground">管理和查看您的 AI 工具会话</p>
         </div>
-        <Button onClick={handleCreateSession}>
-          <Plus size={18} className="mr-2" />
-          新建会话
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => setImportDialogOpen(true)}>
+            <Import size={18} className="mr-2" />
+            导入会话
+          </Button>
+          <Button onClick={handleCreateSession}>
+            <Plus size={18} className="mr-2" />
+            新建会话
+          </Button>
+        </div>
       </div>
 
       {/* 搜索和过滤栏 */}
@@ -254,6 +263,9 @@ const Sessions = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 导入对话框 */}
+      <ImportDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
     </div>
   );
 };

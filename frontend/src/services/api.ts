@@ -11,21 +11,6 @@ const api = axios.create({
   },
 });
 
-// 请求拦截器
-api.interceptors.request.use(
-  (config) => {
-    // 可以添加认证token
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 // 响应拦截器
 api.interceptors.response.use(
   (response) => response,
@@ -103,19 +88,80 @@ export const deleteTag = async (id: number) => {
   return response.data;
 };
 
-// 用户管理 API
-export const login = async (credentials: any) => {
-  const response = await api.post('/auth/login', credentials);
+// 导入管理 API
+export const importGithubCopilot = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/github-copilot', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
 
-export const register = async (userData: any) => {
-  const response = await api.post('/auth/register', userData);
+export const importCursor = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/cursor', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
 
-export const getUserProfile = async () => {
-  const response = await api.get('/auth/me');
+export const importVSCode = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/vs-code', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const importCloudCode = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/cloud-code', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const importCodeX = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/codex', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const importGemini = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/import/gemini', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getImportTasks = async () => {
+  const response = await api.get('/import/tasks');
+  return response.data;
+};
+
+export const getImportTask = async (id: number) => {
+  const response = await api.get(`/import/tasks/${id}`);
   return response.data;
 };
 

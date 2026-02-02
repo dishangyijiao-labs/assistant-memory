@@ -1,7 +1,6 @@
 Flask==2.3.0
 Flask-SQLAlchemy==3.0.5
 Flask-CORS==4.0.0
-Flask-JWT-Extended==4.5.3
 python-dotenv==1.0.0
 pydantic==2.5.3
 pytest==7.4.4

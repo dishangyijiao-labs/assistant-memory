@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
 
 # 加载环境变量
 load_dotenv()
@@ -18,18 +17,16 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///ide_memory.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key')
 
 # 初始化扩展
 db = SQLAlchemy(app)
 CORS(app)
-jwt = JWTManager(app)
 
 # 导入路由和模型
 from src.api.sessions import sessions_bp
 from src.api.messages import messages_bp
 from src.api.tags import tags_bp
-from src.api.import import import_bp
+from src.api.imports import import_bp
 
 # 注册蓝图
 app.register_blueprint(sessions_bp, url_prefix='/api/sessions')

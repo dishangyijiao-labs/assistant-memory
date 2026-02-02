@@ -3,8 +3,7 @@
 """
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, current_user
-from src.models.message import Message
+from src.models import Message
 from src.services.message_manager import MessageManager
 from src.utils.database import db
 from datetime import datetime
@@ -13,7 +12,6 @@ messages_bp = Blueprint('messages', __name__)
 message_manager = MessageManager()
 
 @messages_bp.route('/sessions/<int:session_id>/messages', methods=['GET'])
-@jwt_required(optional=True)
 def get_messages(session_id):
     """获取会话的所有消息"""
     try:
@@ -23,7 +21,6 @@ def get_messages(session_id):
         return jsonify({'error': str(e)}), 500
 
 @messages_bp.route('/sessions/<int:session_id>/messages', methods=['POST'])
-@jwt_required(optional=True)
 def create_message(session_id):
     """创建消息"""
     try:
@@ -36,7 +33,6 @@ def create_message(session_id):
         return jsonify({'error': str(e)}), 400
 
 @messages_bp.route('/messages/<int:id>', methods=['GET'])
-@jwt_required(optional=True)
 def get_message(id):
     """获取单个消息"""
     try:
@@ -48,7 +44,6 @@ def get_message(id):
         return jsonify({'error': str(e)}), 404
 
 @messages_bp.route('/messages/<int:id>', methods=['PUT'])
-@jwt_required(optional=True)
 def update_message(id):
     """更新消息"""
     try:
@@ -62,7 +57,6 @@ def update_message(id):
         return jsonify({'error': str(e)}), 400
 
 @messages_bp.route('/messages/<int:id>', methods=['DELETE'])
-@jwt_required(optional=True)
 def delete_message(id):
     """删除消息"""
     try:
@@ -75,7 +69,6 @@ def delete_message(id):
         return jsonify({'error': str(e)}), 500
 
 @messages_bp.route('/sessions/<int:session_id>/messages/count', methods=['GET'])
-@jwt_required(optional=True)
 def get_message_count(session_id):
     """获取会话的消息数量"""
     try:

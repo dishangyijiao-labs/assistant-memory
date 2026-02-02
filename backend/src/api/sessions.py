@@ -3,8 +3,7 @@
 """
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, current_user
-from src.models.session import Session
+from src.models import Session
 from src.services.session_manager import SessionManager
 from src.utils.database import db
 from datetime import datetime
@@ -13,7 +12,6 @@ sessions_bp = Blueprint('sessions', __name__)
 session_manager = SessionManager()
 
 @sessions_bp.route('/', methods=['GET'])
-@jwt_required(optional=True)
 def get_sessions():
     """获取所有会话"""
     try:
@@ -42,7 +40,6 @@ def get_sessions():
         return jsonify({'error': str(e)}), 500
 
 @sessions_bp.route('/', methods=['POST'])
-@jwt_required(optional=True)
 def create_session():
     """创建新会话"""
     try:
@@ -54,7 +51,6 @@ def create_session():
         return jsonify({'error': str(e)}), 400
 
 @sessions_bp.route('/<int:id>', methods=['GET'])
-@jwt_required(optional=True)
 def get_session(id):
     """获取单个会话"""
     try:
@@ -66,7 +62,6 @@ def get_session(id):
         return jsonify({'error': str(e)}), 404
 
 @sessions_bp.route('/<int:id>', methods=['PUT'])
-@jwt_required(optional=True)
 def update_session(id):
     """更新会话"""
     try:
@@ -80,7 +75,6 @@ def update_session(id):
         return jsonify({'error': str(e)}), 400
 
 @sessions_bp.route('/<int:id>', methods=['DELETE'])
-@jwt_required(optional=True)
 def delete_session(id):
     """删除会话"""
     try:
@@ -93,7 +87,6 @@ def delete_session(id):
         return jsonify({'error': str(e)}), 500
 
 @sessions_bp.route('/<int:id>/statistics', methods=['GET'])
-@jwt_required(optional=True)
 def get_session_statistics(id):
     """获取会话统计信息"""
     try:
