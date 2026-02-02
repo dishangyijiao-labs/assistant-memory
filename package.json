@@ -1,0 +1,50 @@
+{
+  "name": "assistant-memory",
+  "version": "0.1.0",
+  "description": "Local indexer and keyword search for Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI. No login.",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "assistant-memory": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && cp src/storage/schema.sql dist/storage/",
+    "start": "node dist/index.js",
+    "index": "node dist/index.js index",
+    "search": "node dist/index.js search",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "cursor",
+    "copilot",
+    "claude-code",
+    "codex",
+    "gemini",
+    "chat-history",
+    "full-text-search",
+    "local"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dishangyijiao/assistant-memory.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.6.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

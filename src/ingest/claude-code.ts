@@ -1,0 +1,94 @@
+import { readdirSync, readFileSync, existsSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
+import type { RawSession, RawMessage } from "./types.js";
+
+const CLAUDE_PROJECTS = join(homedir(), ".claude", "projects");
+
+export function ingestClaudeCode(): RawSession[] {
+  if (!existsSync(CLAUDE_PROJECTS)) return [];
+
+  const sessions: RawSession[] = [];
+  const projectDirs = readdirSync(CLAUDE_PROJECTS, { withFileTypes: true }).filter((d) => d.isDirectory());
+
+  for (const proj of projectDirs) {
+    const dir = join(CLAUDE_PROJECTS, proj.name);
+    const files = readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
+    for (const file of files) {
+      const sessionId = file.replace(/\.jsonl$/, "");
+      const path = join(dir, file);
+      try {
+        const s = parseClaudeJsonl(path, proj.name);
+        if (s) {
+          s.external_id = sessionId;
+          if (s.messages.length > 0) sessions.push(s);
+        }
+      } catch (_e) {
+        // Skip
+      }
+    }
+  }
+
+  return sessions;
+}
+
+interface ClaudeJsonlMessage {
+  type?: string;
+  uuid?: string;
+  sessionId?: string;
+  timestamp?: string;
+  message?: { role?: string; content?: string | unknown[] };
+  content?: string;
+}
+
+function parseClaudeJsonl(filePath: string, workspace: string): RawSession | null {
+  const content = readFileSync(filePath, "utf-8");
+  const lines = content.split("\n").filter((l) => l.trim());
+  const messages: RawMessage[] = [];
+  let started = Date.now();
+  let last = 0;
+
+  for (const line of lines) {
+    try {
+      const msg = JSON.parse(line) as ClaudeJsonlMessage;
+      const role = msg.type === "user" ? "user" : msg.type === "assistant" ? "assistant" : msg.type === "system" ? "system" : (msg.message?.role as string) ?? "assistant";
+      let text = "";
+      if (typeof msg.content === "string") text = msg.content;
+      else if (msg.message) {
+        const c = (msg.message as { content?: string | unknown[] }).content;
+        if (typeof c === "string") text = c;
+        else if (Array.isArray(c)) text = c.map((x: unknown) => (typeof x === "object" && x && "text" in x ? (x as { text: string }).text : String(x))).join("\n");
+      }
+      if (!text.trim() && role !== "system") continue;
+      const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now();
+      if (ts < started) started = ts;
+      if (ts > last) last = ts;
+      messages.push({
+        role: role === "user" ? "user" : role === "system" ? "system" : "assistant",
+        content: text.trim() || "(no text)",
+        timestamp: ts,
+        external_id: msg.uuid,
+      });
+    } catch (_e) {
+      // Skip bad lines
+    }
+  }
+
+  if (messages.length === 0) return null;
+  let sessionId: string;
+  try {
+    const first = JSON.parse(lines[0]) as ClaudeJsonlMessage;
+    sessionId = first.sessionId ?? "";
+  } catch {
+    sessionId = "";
+  }
+  if (!sessionId) sessionId = filePath.split("/").pop()?.replace(/\.jsonl$/, "") ?? "unknown";
+  return {
+    source: "claude-code",
+    workspace,
+    external_id: sessionId,
+    started_at: started,
+    last_at: last || started,
+    messages,
+  };
+}
