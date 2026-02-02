@@ -1,0 +1,143 @@
+import Database from "better-sqlite3";
+import { existsSync, mkdirSync, readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { homedir, platform } from "os";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const SOURCES = ["cursor", "cursor-cli", "copilot", "claude-code", "codex", "gemini"] as const;
+export type Source = (typeof SOURCES)[number];
+
+export interface SessionRow {
+  id: number;
+  source: string;
+  workspace: string;
+  external_id: string;
+  started_at: number;
+  last_at: number;
+  message_count: number;
+  created_at: number;
+}
+
+export interface MessageRow {
+  id: number;
+  session_id: number;
+  role: string;
+  content: string;
+  timestamp: number;
+  external_id: string | null;
+  created_at: number;
+}
+
+export interface NormalizedSession {
+  source: Source;
+  workspace: string;
+  external_id: string;
+  started_at: number;
+  last_at: number;
+  message_count: number;
+}
+
+export interface NormalizedMessage {
+  session_external: string;
+  source: Source;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: number;
+  external_id?: string;
+}
+
+function getDefaultDbPath(): string {
+  const home = homedir();
+  if (platform() === "win32") {
+    return join(home, "AppData", "Local", "assistant-memory", "assistant-memory.db");
+  }
+  return join(home, ".assistant-memory.db");
+}
+
+export function getDbPath(): string {
+  return process.env.ASSISTANT_MEMORY_DB_PATH || getDefaultDbPath();
+}
+
+let db: Database.Database | null = null;
+
+export function getDb(): Database.Database {
+  if (!db) {
+    const path = getDbPath();
+    const dir = dirname(path);
+    if (dir && !existsSync(dir) && path !== join(homedir(), ".assistant-memory.db")) {
+      mkdirSync(dir, { recursive: true });
+    }
+    db = new Database(path);
+    db.pragma("journal_mode = WAL");
+    const schemaPath = join(__dirname, "schema.sql");
+    const schema = readFileSync(schemaPath, "utf-8");
+    db.exec(schema);
+  }
+  return db;
+}
+
+export function closeDb(): void {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
+export function upsertSession(s: NormalizedSession): number {
+  const database = getDb();
+  const now = Date.now();
+  const stmt = database.prepare(`
+    INSERT INTO sessions (source, workspace, external_id, started_at, last_at, message_count, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(source, external_id) DO UPDATE SET
+      workspace = excluded.workspace,
+      last_at = excluded.last_at,
+      message_count = excluded.message_count
+    RETURNING id
+  `);
+  const row = stmt.get(s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count, now) as { id: number };
+  return row.id;
+}
+
+export function getSessionIdByExternal(source: Source, external_id: string): number | null {
+  const row = getDb().prepare("SELECT id FROM sessions WHERE source = ? AND external_id = ?").get(source, external_id) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+export function insertMessage(sessionId: number, m: NormalizedMessage): void {
+  const database = getDb();
+  const now = Date.now();
+  database
+    .prepare(
+      "INSERT INTO messages (session_id, role, content, timestamp, external_id, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .run(sessionId, m.role, m.content, m.timestamp, m.external_id ?? null, now);
+}
+
+export function searchMessages(query: string, limit: number = 50): Array<{ snippet: string; session_id: number; source: string; workspace: string; last_at: number }> {
+  const database = getDb();
+  const stmt = database.prepare(`
+    SELECT
+      snippet(messages_fts, 0, '**', '**', '…', 32) AS snippet,
+      m.session_id,
+      s.source,
+      s.workspace,
+      s.last_at
+    FROM messages_fts f
+    JOIN messages m ON m.id = f.rowid
+    JOIN sessions s ON s.id = m.session_id
+    WHERE messages_fts MATCH ?
+    ORDER BY s.last_at DESC
+    LIMIT ?
+  `);
+  return stmt.all(query, limit) as Array<{ snippet: string; session_id: number; source: string; workspace: string; last_at: number }>;
+}
+
+export function getStats(): { sessions: number; messages: number } {
+  const database = getDb();
+  const sessions = (database.prepare("SELECT COUNT(*) AS c FROM sessions").get() as { c: number }).c;
+  const messages = (database.prepare("SELECT COUNT(*) AS c FROM messages").get() as { c: number }).c;
+  return { sessions, messages };
+}
