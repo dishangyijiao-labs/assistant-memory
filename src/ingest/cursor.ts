@@ -36,15 +36,28 @@ export function ingestCursor(): RawSession[] {
 
     try {
       const db = new Database(statePath, { readonly: true });
+      let foundAny = false;
       for (const key of CURSOR_KEYS) {
-        const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as { value: string } | undefined;
-        if (!row?.value) continue;
-        const data = parseCursorChatData(row.value);
+        const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as { value: unknown } | undefined;
+        const text = row?.value ? asText(row.value) : null;
+        if (!text) continue;
+        const data = parseCursorChatData(text);
         for (const s of data) {
           s.workspace = s.workspace || dir.name;
           sessions.push(s);
         }
-        if (data.length > 0) break;
+        if (data.length > 0) {
+          foundAny = true;
+          break;
+        }
+      }
+      if (!foundAny) {
+        const promptRow = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get("aiService.prompts") as { value: unknown } | undefined;
+        const genRow = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get("aiService.generations") as { value: unknown } | undefined;
+        const promptText = promptRow?.value ? asText(promptRow.value) : null;
+        const genText = genRow?.value ? asText(genRow.value) : null;
+        const fallback = parseCursorPromptHistory(promptText, genText, dir.name);
+        if (fallback) sessions.push(fallback);
       }
       db.close();
     } catch (_e) {
@@ -53,6 +66,14 @@ export function ingestCursor(): RawSession[] {
   }
 
   return sessions;
+}
+
+function asText(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && Buffer.isBuffer(value)) {
+    return value.toString("utf-8");
+  }
+  return null;
 }
 
 function parseCursorChatData(json: string): RawSession[] {
@@ -72,6 +93,72 @@ function parseCursorChatData(json: string): RawSession[] {
     // Ignore parse errors
   }
   return out;
+}
+
+interface CursorPromptEntry {
+  text?: string;
+  commandType?: number;
+}
+
+interface CursorGenerationEntry {
+  unixMs?: number;
+  textDescription?: string;
+}
+
+function parseCursorPromptHistory(
+  promptsJson: string | null,
+  generationsJson: string | null,
+  workspace: string
+): RawSession | null {
+  if (!promptsJson && !generationsJson) return null;
+  let prompts: CursorPromptEntry[] = [];
+  let gens: CursorGenerationEntry[] = [];
+  try {
+    if (promptsJson) {
+      const parsed = JSON.parse(promptsJson);
+      if (Array.isArray(parsed)) prompts = parsed as CursorPromptEntry[];
+    }
+  } catch (_e) {
+    // Ignore
+  }
+  try {
+    if (generationsJson) {
+      const parsed = JSON.parse(generationsJson);
+      if (Array.isArray(parsed)) gens = parsed as CursorGenerationEntry[];
+    }
+  } catch (_e) {
+    // Ignore
+  }
+
+  const max = Math.max(prompts.length, gens.length);
+  if (max === 0) return null;
+  const base = Date.now() - max * 1000;
+  const messages: RawMessage[] = [];
+  for (let i = 0; i < max; i += 1) {
+    const prompt = prompts[i];
+    if (prompt?.text && String(prompt.text).trim()) {
+      const ts = gens[i]?.unixMs ?? base + i * 1000;
+      messages.push({ role: "user", content: String(prompt.text).trim(), timestamp: ts });
+    }
+    const gen = gens[i];
+    if (gen?.textDescription && String(gen.textDescription).trim()) {
+      const ts = gen.unixMs ?? base + i * 1000 + 1;
+      messages.push({ role: "assistant", content: String(gen.textDescription).trim(), timestamp: ts });
+    }
+  }
+
+  if (messages.length === 0) return null;
+  const timestamps = messages.map((m) => m.timestamp).filter((t) => t > 0);
+  const started = timestamps.length ? Math.min(...timestamps) : Date.now();
+  const last = timestamps.length ? Math.max(...timestamps) : Date.now();
+  return {
+    source: "cursor",
+    workspace,
+    external_id: `cursor-prompts-${workspace}`,
+    started_at: started,
+    last_at: last,
+    messages,
+  };
 }
 
 function cursorConvToSession(conv: Record<string, unknown>): RawSession | null {

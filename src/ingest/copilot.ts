@@ -48,7 +48,73 @@ interface CopilotRequest {
   response?: string;
   timestamp?: number;
   creationDate?: number;
+  role?: string;
+  content?: unknown;
+  messages?: unknown;
+  message?: unknown;
   [key: string]: unknown;
+}
+
+const COPILOT_SKIP_KINDS = new Set([
+  "mcpServersStarting",
+  "progressTaskSerialized",
+  "thinking",
+  "prepareToolInvocation",
+  "toolInvocationSerialized",
+  "inlineReference",
+  "confirmation",
+]);
+
+function copilotText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    // Response streams often arrive as arrays of event objects
+    const parts: string[] = [];
+    for (const item of value) {
+      if (item && typeof item === "object") {
+        const obj = item as Record<string, unknown>;
+        const kind = typeof obj.kind === "string" ? obj.kind : "";
+        if (kind && COPILOT_SKIP_KINDS.has(kind)) continue;
+        const text = copilotText(obj.value ?? obj.message ?? obj.content ?? obj.text ?? obj);
+        if (text.trim()) parts.push(text.trim());
+      } else {
+        const text = copilotText(item);
+        if (text.trim()) parts.push(text.trim());
+      }
+    }
+    return parts.join("\n");
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const kind = typeof obj.kind === "string" ? obj.kind : "";
+    if (kind && COPILOT_SKIP_KINDS.has(kind)) return "";
+    const direct = obj.text ?? obj.content ?? obj.value ?? obj.message ?? obj.prompt ?? obj.response;
+    const directText = copilotText(direct);
+    if (directText) return directText;
+    const arrays = [obj.parts, obj.segments, obj.items, obj.messages, obj.children];
+    for (const arr of arrays) {
+      if (Array.isArray(arr)) {
+        const text = copilotText(arr);
+        if (text) return text;
+      }
+    }
+    const strings: string[] = [];
+    for (const v of Object.values(obj)) {
+      if (typeof v === "string" && v.trim()) strings.push(v.trim());
+    }
+    if (strings.length > 0) return strings.join(" ");
+  }
+  return "";
+}
+
+function normalizeRole(role: string | undefined): "user" | "assistant" | "system" | null {
+  if (!role) return null;
+  const r = role.toLowerCase();
+  if (r.includes("user")) return "user";
+  if (r.includes("assistant") || r.includes("copilot")) return "assistant";
+  if (r.includes("system")) return "system";
+  return null;
 }
 
 function parseCopilotSession(json: string, workspaceHash: string): RawSession | null {
@@ -69,13 +135,32 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
       if (timestamp < started) started = timestamp;
       if (timestamp > last) last = timestamp;
 
-      const prompt = (req.prompt ?? req.input ?? req.message ?? req.text ?? "") as string;
-      if (prompt && String(prompt).trim()) {
-        messages.push({ role: "user", content: String(prompt).trim(), timestamp });
+      const role = normalizeRole(req.role as string | undefined);
+      const roleContent = role ? copilotText(req.content ?? req.message ?? req.text ?? req) : "";
+      if (role && roleContent.trim()) {
+        messages.push({ role, content: roleContent.trim(), timestamp });
+        continue;
       }
-      const response = (req.response ?? req.output ?? req.content ?? req.text ?? "") as string;
-      if (response && String(response).trim()) {
-        messages.push({ role: "assistant", content: String(response).trim(), timestamp });
+
+      if (Array.isArray(req.messages)) {
+        for (const msg of req.messages as Array<Record<string, unknown>>) {
+          const msgRole = normalizeRole(msg.role as string | undefined);
+          if (!msgRole) continue;
+          const msgText = copilotText(msg.content ?? msg.message ?? msg.text ?? msg);
+          if (msgText.trim()) {
+            messages.push({ role: msgRole, content: msgText.trim(), timestamp });
+          }
+        }
+        continue;
+      }
+
+      const prompt = copilotText(req.prompt ?? req.input ?? req.message ?? req.text ?? "");
+      if (prompt.trim()) {
+        messages.push({ role: "user", content: prompt.trim(), timestamp });
+      }
+      const response = copilotText(req.response ?? req.output ?? req.content ?? req.text ?? "");
+      if (response.trim()) {
+        messages.push({ role: "assistant", content: response.trim(), timestamp });
       }
     }
 

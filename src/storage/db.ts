@@ -116,38 +116,46 @@ export function insertMessage(sessionId: number, m: NormalizedMessage): void {
     .run(sessionId, m.role, m.content, m.timestamp, m.external_id ?? null, now);
 }
 
+export function clearSessionMessages(sessionId: number): void {
+  getDb().prepare("DELETE FROM messages WHERE session_id = ?").run(sessionId);
+}
+
 export interface MessageResult {
-    snippet: string;
-    session_id: number;
-    source: string;
-    workspace: string;
-    last_at: number;
+  message_id: number;
+  snippet: string;
+  session_id: number;
+  source: string;
+  workspace: string;
+  last_at: number;
+  timestamp: number;
 }
 
 export function listMessages(
-    limit: number = 50,
-    source?: Source
-  ): MessageResult[] {
-    const database = getDb();
-    const whereSource = source ? "AND s.source = ?" : "";
-    const stmt = database.prepare(`
-      SELECT
-        substr(m.content, 1, 300) AS snippet,
-        m.session_id,
-        s.source,
-        s.workspace,
-        s.last_at
-      FROM messages m
-      JOIN sessions s ON s.id = m.session_id
-      WHERE 1=1 ${whereSource}
-      ORDER BY m.timestamp DESC
-      LIMIT ?
-    `);
-    const params: Array<string | number> = [];
-    if (source) params.push(source);
-    params.push(limit);
-    return stmt.all(...params) as MessageResult[];
-  }
+  limit: number = 50,
+  source?: Source
+): MessageResult[] {
+  const database = getDb();
+  const whereSource = source ? "AND s.source = ?" : "";
+  const stmt = database.prepare(`
+    SELECT
+      m.id AS message_id,
+      substr(m.content, 1, 300) AS snippet,
+      m.session_id,
+      s.source,
+      s.workspace,
+      s.last_at,
+      m.timestamp
+    FROM messages m
+    JOIN sessions s ON s.id = m.session_id
+    WHERE 1=1 ${whereSource}
+    ORDER BY m.timestamp DESC
+    LIMIT ?
+  `);
+  const params: Array<string | number> = [];
+  if (source) params.push(source);
+  params.push(limit);
+  return stmt.all(...params) as MessageResult[];
+}
 
 export function searchMessages(
   query: string,
@@ -158,11 +166,13 @@ export function searchMessages(
   const whereSource = source ? "AND s.source = ?" : "";
   const stmt = database.prepare(`
     SELECT
+      m.id AS message_id,
       snippet(messages_fts, 0, '**', '**', '…', 32) AS snippet,
       m.session_id,
       s.source,
       s.workspace,
-      s.last_at
+      s.last_at,
+      m.timestamp
     FROM messages_fts f
     JOIN messages m ON m.id = f.rowid
     JOIN sessions s ON s.id = m.session_id
@@ -186,22 +196,64 @@ export interface SessionListItem {
   message_count: number;
 }
 
-export function listSessions(opts: { source?: Source; limit?: number; offset?: number } = {}): SessionListItem[] {
+export function listSessions(
+  opts: { source?: Source; limit?: number; offset?: number; query?: string } = {}
+): SessionListItem[] {
   const database = getDb();
   const limit = Math.min(500, Math.max(1, opts.limit ?? 100));
   const offset = Math.max(0, opts.offset ?? 0);
+  const query = (opts.query ?? "").trim();
+  const hasQuery = query.length > 0;
+  const whereSource = opts.source ? "source = ?" : "1=1";
+  const whereQuery = hasQuery ? "AND (workspace LIKE ? OR external_id LIKE ?)" : "";
   if (opts.source) {
     const stmt = database.prepare(`
       SELECT id, source, workspace, external_id, started_at, last_at, message_count
-      FROM sessions WHERE source = ? ORDER BY last_at DESC LIMIT ? OFFSET ?
+      FROM sessions WHERE ${whereSource} ${whereQuery} ORDER BY last_at DESC LIMIT ? OFFSET ?
     `);
-    return stmt.all(opts.source, limit, offset) as SessionListItem[];
+    const params: Array<string | number> = [opts.source];
+    if (hasQuery) {
+      const like = "%" + query + "%";
+      params.push(like, like);
+    }
+    params.push(limit, offset);
+    return stmt.all(...params) as SessionListItem[];
   }
   const stmt = database.prepare(`
     SELECT id, source, workspace, external_id, started_at, last_at, message_count
-    FROM sessions ORDER BY last_at DESC LIMIT ? OFFSET ?
+    FROM sessions WHERE ${whereSource} ${whereQuery} ORDER BY last_at DESC LIMIT ? OFFSET ?
   `);
-  return stmt.all(limit, offset) as SessionListItem[];
+  const params: Array<string | number> = [];
+  if (hasQuery) {
+    const like = "%" + query + "%";
+    params.push(like, like);
+  }
+  params.push(limit, offset);
+  return stmt.all(...params) as SessionListItem[];
+}
+
+export function countSessions(opts: { source?: Source; query?: string } = {}): number {
+  const database = getDb();
+  const query = (opts.query ?? "").trim();
+  const hasQuery = query.length > 0;
+  const whereSource = opts.source ? "source = ?" : "1=1";
+  const whereQuery = hasQuery ? "AND (workspace LIKE ? OR external_id LIKE ?)" : "";
+  if (opts.source) {
+    const stmt = database.prepare(`SELECT COUNT(*) AS c FROM sessions WHERE ${whereSource} ${whereQuery}`);
+    const params: Array<string | number> = [opts.source];
+    if (hasQuery) {
+      const like = "%" + query + "%";
+      params.push(like, like);
+    }
+    return (stmt.get(...params) as { c: number }).c;
+  }
+  const stmt = database.prepare(`SELECT COUNT(*) AS c FROM sessions WHERE ${whereSource} ${whereQuery}`);
+  const params: Array<string | number> = [];
+  if (hasQuery) {
+    const like = "%" + query + "%";
+    params.push(like, like);
+  }
+  return (stmt.get(...params) as { c: number }).c;
 }
 
 export function getStats(): { sessions: number; messages: number } {
@@ -209,4 +261,28 @@ export function getStats(): { sessions: number; messages: number } {
   const sessions = (database.prepare("SELECT COUNT(*) AS c FROM sessions").get() as { c: number }).c;
   const messages = (database.prepare("SELECT COUNT(*) AS c FROM messages").get() as { c: number }).c;
   return { sessions, messages };
+}
+
+export interface SessionDetail {
+  session: SessionListItem;
+  messages: Array<{
+    id: number;
+    role: string;
+    content: string;
+    timestamp: number;
+  }>;
+}
+
+export function getSessionDetail(sessionId: number, limit: number = 2000, offset: number = 0): SessionDetail | null {
+  const database = getDb();
+  const session = database
+    .prepare("SELECT id, source, workspace, external_id, started_at, last_at, message_count FROM sessions WHERE id = ?")
+    .get(sessionId) as SessionListItem | undefined;
+  if (!session) return null;
+  const messages = database
+    .prepare(
+      "SELECT id, role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+    )
+    .all(sessionId, Math.min(5000, Math.max(1, limit)), Math.max(0, offset)) as SessionDetail["messages"];
+  return { session, messages };
 }
