@@ -23,7 +23,7 @@ function getSearchPage(): string {
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --accent-soft: #eff6ff;
-      --user-bubble: #374151;
+      --user-bubble: #f3f4f6;
       --assistant-bg: #ffffff;
       --code-bg: #1e293b;
       --code-text: #e2e8f0;
@@ -121,13 +121,7 @@ function getSearchPage(): string {
       display: flex; align-items: center; gap: 0.5rem;
       font-size: 0.75rem;
     }
-    .source-badge { font-weight: 600; font-size: 0.72rem; }
-    .sb-cursor { color: #3b82f6; }
-    .sb-copilot { color: #6366f1; }
-    .sb-claude-code { color: #ef4444; }
-    .sb-cursor-cli { color: #0d9488; }
-    .sb-gemini { color: #16a34a; }
-    .sb-codex { color: #d97706; }
+    .source-badge { font-weight: 600; font-size: 0.72rem; color: var(--muted); }
     .session-time { color: var(--muted); }
 
     /* Sidebar pagination */
@@ -168,13 +162,14 @@ function getSearchPage(): string {
     .btn-index-now:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-index-now svg { width: 14px; height: 14px; }
     .sidebar-foot {
-      padding: 0.35rem 1rem 0.65rem; display: flex; align-items: center;
+      padding: 0.35rem 1rem 0.65rem; display: flex; align-items: center; gap: 0.5rem;
     }
     .btn-settings {
       background: none; border: none; color: var(--muted); cursor: pointer;
       font-size: 1.05rem; padding: 0.2rem; line-height: 1;
     }
     .btn-settings:hover { color: var(--text); }
+    .btn-settings svg { width: 16px; height: 16px; }
 
     /* Content panel */
     .content {
@@ -225,8 +220,8 @@ function getSearchPage(): string {
       font-size: 0.88rem; line-height: 1.6; word-break: break-word;
     }
     .bubble-user {
-      background: var(--user-bubble); color: #fff;
-      border-bottom-right-radius: 4px;
+      background: var(--user-bubble); color: var(--text);
+      border: 1px solid var(--border); border-bottom-right-radius: 4px;
     }
     .bubble-assistant {
       background: var(--assistant-bg); color: var(--text);
@@ -249,20 +244,15 @@ function getSearchPage(): string {
       border-left: 3px solid var(--border); margin: 0.3rem 0;
       padding: 0.2rem 0.6rem; color: var(--muted);
     }
-    .bubble-user blockquote { border-left-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
     .bubble a { color: var(--accent); text-decoration: underline; }
-    .bubble-user a { color: #93c5fd; }
     .bubble strong { font-weight: 600; }
     .bubble code {
       background: rgba(0,0,0,0.07); padding: 0.1rem 0.3rem; border-radius: 3px;
       font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 0.82rem;
     }
-    .bubble-user code { background: rgba(255,255,255,0.15); }
     .bubble table { border-collapse: collapse; margin: 0.3rem 0; font-size: 0.8rem; }
     .bubble th, .bubble td { border: 1px solid var(--border); padding: 0.2rem 0.45rem; }
-    .bubble-user th, .bubble-user td { border-color: rgba(255,255,255,0.2); }
     .bubble th { background: var(--surface); }
-    .bubble-user th { background: rgba(255,255,255,0.08); }
 
     /* Code blocks */
     .code-wrap {
@@ -370,7 +360,7 @@ function getSearchPage(): string {
       </div>
       <div class="sidebar-bottom">
         <a href="/insights" class="btn-insights" title="Insights (Cmd+I)">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l1.5 4.5L16 8l-4.5 1.5L10 14l-1.5-4.5L4 8l4.5-1.5z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
           Insights
         </a>
         <button type="button" class="btn-index-now" id="btn-index" title="Index local chat history">
@@ -379,6 +369,9 @@ function getSearchPage(): string {
         </button>
       </div>
       <div class="sidebar-foot">
+        <button type="button" class="btn-settings" id="btn-settings" title="Settings">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+        </button>
         <span class="db-status" id="db-status"></span>
       </div>
     </aside>
@@ -413,10 +406,6 @@ function getSearchPage(): string {
     var sourceLabels = {
       cursor: "Cursor IDE", copilot: "Copilot", "cursor-cli": "Cursor CLI",
       "claude-code": "Claude Code", codex: "Codex", gemini: "Gemini"
-    };
-    var sourceBadgeClass = {
-      cursor: "sb-cursor", copilot: "sb-copilot", "cursor-cli": "sb-cursor-cli",
-      "claude-code": "sb-claude-code", codex: "sb-codex", gemini: "sb-gemini"
     };
 
     function showToast(text) {
@@ -593,12 +582,11 @@ function getSearchPage(): string {
         var focused = idx === focusedIndex ? " focused" : "";
         var title = getSessionTitle(s);
         var label = sourceLabels[s.source] || s.source || "?";
-        var badgeCls = sourceBadgeClass[s.source] || "";
         var ago = timeAgo(s.last_at);
         return '<div class="session-item' + active + focused + '" data-session-id="' + s.id + '" data-index="' + idx + '" role="option"' + (active ? ' aria-selected="true"' : '') + '>' +
           '<div class="session-item-title" title="' + escapeHtml(s.workspace || "") + '">' + escapeHtml(title) + '</div>' +
           '<div class="session-item-meta">' +
-            '<span class="source-badge ' + badgeCls + '">' + escapeHtml(label) + '</span>' +
+            '<span class="source-badge">' + escapeHtml(label) + '</span>' +
             '<span class="session-time">' + escapeHtml(ago) + '</span>' +
           '</div>' +
         '</div>';
@@ -844,6 +832,16 @@ function getSearchPage(): string {
       loadSessions();
     });
 
+    document.getElementById("q").addEventListener("input", function (e) {
+      var value = this.value || "";
+      if (value === "" && currentQuery !== "") {
+        currentQuery = "";
+        currentPage = 1;
+        selectedSession = null;
+        loadSessions();
+      }
+    });
+
     document.getElementById("prev-page").addEventListener("click", function () {
       if (currentPage <= 1) return;
       currentPage -= 1;
@@ -879,6 +877,10 @@ function getSearchPage(): string {
     });
 
     document.getElementById("btn-index").addEventListener("click", runIndex);
+
+    document.getElementById("btn-settings").addEventListener("click", function () {
+      window.location.href = "/settings";
+    });
 
     /* Init */
     loadSessions();
@@ -1680,6 +1682,803 @@ function getInsightsPage(): string {
 </html>`;
 }
 
+function getSettingsPage(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistant Memory – Settings</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --panel: #f3f4f6;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-soft: #e8efff;
+      --success: #166534;
+      --warning: #b45309;
+      --error: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .layout {
+      max-width: 1160px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 1.4rem;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+      height: fit-content;
+    }
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-title { font-size: 0.98rem; font-weight: 700; }
+    .back-link { font-size: 0.86rem; color: var(--accent); }
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+    }
+    .menu button {
+      text-align: left;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 0.52rem 0.62rem;
+      font: inherit;
+      font-size: 0.86rem;
+      cursor: pointer;
+    }
+    .menu button:hover { border-color: var(--border); color: var(--text); }
+    .menu button.active {
+      background: var(--accent-soft);
+      border-color: #d6e2ff;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .main {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 560px;
+    }
+    .page-title { margin: 0; font-size: 1.3rem; }
+    .page-sub {
+      margin: 0.4rem 0 0.9rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .status {
+      min-height: 1.25rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+    .status.ok { color: var(--success); }
+    .status.warn { color: var(--warning); }
+    .status.err { color: var(--error); }
+    .section { display: none; }
+    .section.active { display: block; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-bottom: 0.9rem;
+    }
+    @media (max-width: 780px) {
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+    .summary-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 0.8rem;
+    }
+    .summary-value { font-size: 1.35rem; font-weight: 700; line-height: 1; }
+    .summary-label { margin-top: 0.3rem; font-size: 0.8rem; color: var(--muted); }
+    .source-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.62rem;
+    }
+    .source-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.72rem;
+    }
+    .source-card.disabled { opacity: 0.74; }
+    .source-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+    .source-main {
+      display: flex;
+      gap: 0.58rem;
+      min-width: 0;
+      flex: 1;
+    }
+    .source-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #eef2ff;
+      color: #1d4ed8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .source-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.38rem;
+    }
+    .source-title { font-size: 1rem; font-weight: 700; }
+    .source-kind {
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      color: var(--muted);
+      border-radius: 999px;
+      font-size: 0.68rem;
+      padding: 0.1rem 0.36rem;
+    }
+    .source-path {
+      margin-top: 0.16rem;
+      color: var(--muted);
+      font-size: 0.79rem;
+      word-break: break-all;
+    }
+    .source-desc {
+      margin-top: 0.18rem;
+      color: var(--muted);
+      font-size: 0.79rem;
+      line-height: 1.4;
+    }
+    .source-meta {
+      margin-top: 0.55rem;
+      padding-top: 0.45rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .source-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    button.btn {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.42rem 0.7rem;
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: #fff;
+      color: var(--text);
+    }
+    button.btn:hover { border-color: var(--accent); }
+    button.btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    button.btn.primary:hover { filter: brightness(0.95); }
+    button.btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .source-config {
+      margin-top: 0.58rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.58rem;
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr) auto;
+      gap: 0.45rem;
+      align-items: center;
+    }
+    @media (max-width: 840px) {
+      .source-config { grid-template-columns: 1fr; }
+    }
+    .source-config.hidden { display: none; }
+    select, input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 0.44rem 0.5rem;
+      font: inherit;
+      font-size: 0.8rem;
+    }
+    .section-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.78rem;
+      margin-bottom: 0.6rem;
+    }
+    .section-card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 0.9rem;
+    }
+    .muted { color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.52rem;
+      align-items: center;
+    }
+    .footer-note {
+      margin-top: 0.7rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 10px;
+      padding: 0.62rem 0.72rem;
+      font-size: 0.79rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 999px;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(16px); }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a class="back-link" href="/">← Back</a>
+        <div class="sidebar-title">Settings</div>
+      </div>
+      <div class="menu" id="settings-nav">
+        <button type="button" data-section="data-sources" class="active">Data Sources</button>
+        <button type="button" data-section="index-sync">Index & Sync</button>
+        <button type="button" data-section="storage">Storage</button>
+        <button type="button" data-section="display">Display</button>
+        <button type="button" data-section="privacy-security">Privacy & Security</button>
+        <button type="button" data-section="export-backup">Export & Backup</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <h1 class="page-title" id="section-title">Data Sources</h1>
+      <p class="page-sub" id="section-sub">Configure where Assistant Memory reads your AI conversation data.</p>
+      <div class="status" id="status"></div>
+
+      <section class="section active" id="section-data-sources">
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-value" id="summary-active">0</div>
+            <div class="summary-label">Active Sources</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value" id="summary-sessions">0</div>
+            <div class="summary-label">Total Sessions</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value" id="summary-messages">0</div>
+            <div class="summary-label">Total Messages</div>
+          </div>
+        </div>
+        <div class="source-list" id="source-list"></div>
+        <div class="row">
+          <button class="btn" id="btn-add-source" type="button">+ Add New Source</button>
+          <button class="btn" id="btn-refresh-sources" type="button">Refresh</button>
+        </div>
+        <div class="footer-note">
+          Supported sources: Cursor IDE, GitHub Copilot, Cursor CLI, Claude Code, Codex, Gemini.
+          Each source can be toggled independently and synced on demand.
+        </div>
+      </section>
+
+      <section class="section" id="section-index-sync">
+        <div class="section-card">
+          <h3>Manual Sync</h3>
+          <div class="muted">Run indexing for all enabled sources now.</div>
+          <div class="row">
+            <button class="btn primary" id="btn-sync-enabled" type="button">Sync Enabled Sources</button>
+          </div>
+          <div class="muted" id="index-sync-meta"></div>
+        </div>
+        <div class="section-card">
+          <h3>Single Source Sync</h3>
+          <div class="muted">Use Data Sources tab to sync one source at a time and inspect its status.</div>
+        </div>
+      </section>
+
+      <section class="section" id="section-storage">
+        <div class="section-card">
+          <h3>Database</h3>
+          <div class="muted" id="storage-db-path">DB path: -</div>
+          <div class="muted" id="storage-db-stats">Sessions: 0 · Messages: 0</div>
+          <div class="row">
+            <button class="btn" id="btn-storage-refresh" type="button">Refresh Stats</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-display">
+        <div class="section-card">
+          <h3>Display Preferences</h3>
+          <div class="muted">Use compact list density for sessions.</div>
+          <div class="row">
+            <label><input type="checkbox" id="display-compact" /> Compact mode</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-privacy-security">
+        <div class="section-card">
+          <h3>Privacy & External API</h3>
+          <div class="muted" id="privacy-model-status">External API: unknown</div>
+          <div class="row">
+            <a href="/insights">Open Insights Model Settings</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-export-backup">
+        <div class="section-card">
+          <h3>Export</h3>
+          <div class="muted">Download current source settings as JSON.</div>
+          <div class="row">
+            <button class="btn" id="btn-export-settings" type="button">Export Source Settings</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    var sectionMeta = {
+      "data-sources": {
+        title: "Data Sources",
+        sub: "Configure where Assistant Memory reads your AI conversation data."
+      },
+      "index-sync": {
+        title: "Index & Sync",
+        sub: "Control manual indexing and source sync operations."
+      },
+      "storage": {
+        title: "Storage",
+        sub: "Inspect the local database path and indexed volume."
+      },
+      "display": {
+        title: "Display",
+        sub: "Configure viewing preferences for the desktop client."
+      },
+      "privacy-security": {
+        title: "Privacy & Security",
+        sub: "Review external API status and privacy boundaries."
+      },
+      "export-backup": {
+        title: "Export & Backup",
+        sub: "Export reusable settings artifacts from this machine."
+      }
+    };
+
+    var modeLabel = {
+      local_files: "Local Files",
+      file_import: "File Import",
+      api: "API"
+    };
+
+    var sourcePayload = null;
+
+    function safeText(v) {
+      return typeof v === "string" ? v : "";
+    }
+
+    function escapeHtml(v) {
+      return safeText(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function formatNumber(v) {
+      var n = typeof v === "number" ? v : 0;
+      return n.toLocaleString();
+    }
+
+    function formatTime(ts) {
+      if (!ts) return "Never";
+      var d = new Date(ts);
+      if (isNaN(d.getTime())) return "Unknown";
+      return d.toLocaleString();
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return "never";
+      var delta = Date.now() - ts;
+      if (delta < 60000) return "just now";
+      if (delta < 3600000) return Math.round(delta / 60000) + " min ago";
+      if (delta < 86400000) return Math.round(delta / 3600000) + " hr ago";
+      return Math.round(delta / 86400000) + " day ago";
+    }
+
+    function setStatus(message, kind) {
+      var el = document.getElementById("status");
+      el.className = "status";
+      if (kind) el.classList.add(kind);
+      el.textContent = message || "";
+    }
+
+    function parseError(payload) {
+      if (!payload) return "Request failed";
+      if (typeof payload.error === "string") return payload.error;
+      if (payload.error && typeof payload.error.message === "string") return payload.error.message;
+      return "Request failed";
+    }
+
+    function api(path, options) {
+      return fetch(path, options || {}).then(function (res) {
+        return res.text().then(function (text) {
+          var payload = {};
+          try { payload = text ? JSON.parse(text) : {}; } catch (_e) {}
+          if (!res.ok) throw new Error(parseError(payload));
+          return payload;
+        });
+      });
+    }
+
+    function activateSection(sectionId) {
+      var title = document.getElementById("section-title");
+      var sub = document.getElementById("section-sub");
+      var meta = sectionMeta[sectionId] || sectionMeta["data-sources"];
+      title.textContent = meta.title;
+      sub.textContent = meta.sub;
+
+      document.querySelectorAll("#settings-nav button").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-section") === sectionId);
+      });
+      document.querySelectorAll(".section").forEach(function (sec) {
+        sec.classList.toggle("active", sec.id === "section-" + sectionId);
+      });
+    }
+
+    function renderSummary(payload) {
+      var summary = payload && payload.summary ? payload.summary : {};
+      document.getElementById("summary-active").textContent = formatNumber(summary.active_sources || 0);
+      document.getElementById("summary-sessions").textContent = formatNumber(summary.total_sessions || 0);
+      document.getElementById("summary-messages").textContent = formatNumber(summary.total_messages || 0);
+      document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.db_path || "-");
+      document.getElementById("storage-db-stats").textContent =
+        "Sessions: " + formatNumber(summary.total_sessions || 0) + " · Messages: " + formatNumber(summary.total_messages || 0);
+    }
+
+    function renderModeOptions(selected) {
+      var opts = ["local_files", "file_import", "api"];
+      return opts.map(function (mode) {
+        var label = modeLabel[mode] || mode;
+        var sel = mode === selected ? " selected" : "";
+        return '<option value="' + mode + '"' + sel + ">" + escapeHtml(label) + "</option>";
+      }).join("");
+    }
+
+    function renderSources(payload) {
+      var list = (payload && payload.sources) || [];
+      var host = document.getElementById("source-list");
+      if (!list.length) {
+        host.innerHTML = '<div class="section-card"><div class="muted">No source configuration available.</div></div>';
+        return;
+      }
+      host.innerHTML = list.map(function (s) {
+        var source = safeText(s.source);
+        var label = safeText(s.label || source);
+        var kind = modeLabel[s.mode] || safeText(s.mode);
+        var enabled = !!s.enabled;
+        var cardCls = "source-card" + (enabled ? "" : " disabled");
+        var icon = label ? label.charAt(0).toUpperCase() : "?";
+        return '<div class="' + cardCls + '" data-source="' + escapeHtml(source) + '">' +
+          '<div class="source-top">' +
+            '<div class="source-main">' +
+              '<div class="source-icon">' + escapeHtml(icon) + '</div>' +
+              '<div>' +
+                '<div class="source-title-row"><span class="source-title">' + escapeHtml(label) + '</span><span class="source-kind">' + escapeHtml(kind) + '</span></div>' +
+                '<div class="source-path">' + escapeHtml(safeText(s.path || "")) + '</div>' +
+                '<div class="source-desc">' + escapeHtml(safeText(s.description || "")) + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<label class="switch">' +
+              '<input class="source-toggle" type="checkbox"' + (enabled ? " checked" : "") + " />" +
+              '<span class="slider"></span>' +
+            '</label>' +
+          '</div>' +
+          '<div class="source-meta">' +
+            '<span>' + formatNumber(s.session_count || 0) + ' sessions</span>' +
+            '<span>' + formatNumber(s.message_count || 0) + ' messages</span>' +
+            '<span>Last activity: ' + escapeHtml(timeAgo(s.last_activity_at)) + '</span>' +
+            '<span>Last sync: ' + escapeHtml(timeAgo(s.last_sync_at)) + '</span>' +
+          '</div>' +
+          '<div class="source-actions">' +
+            '<button type="button" class="btn sync-now">Sync Now</button>' +
+            '<button type="button" class="btn configure-source">Configure</button>' +
+          '</div>' +
+          '<div class="source-config hidden">' +
+            '<select class="source-mode">' + renderModeOptions(safeText(s.mode)) + '</select>' +
+            '<input class="source-path-input" type="text" value="' + escapeHtml(safeText(s.path)) + '" placeholder="Source path" />' +
+            '<div class="row" style="margin-top:0;">' +
+              '<button type="button" class="btn primary save-source">Save</button>' +
+              '<button type="button" class="btn cancel-source">Cancel</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function findSourceCard(node) {
+      if (!node || !node.closest) return null;
+      return node.closest(".source-card[data-source]");
+    }
+
+    function sourceFromCard(card) {
+      if (!card) return "";
+      return card.getAttribute("data-source") || "";
+    }
+
+    function patchSource(source, patch) {
+      return api("/api/settings/sources/" + encodeURIComponent(source), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch || {}),
+      });
+    }
+
+    function syncSource(source) {
+      return api("/api/settings/sources/" + encodeURIComponent(source) + "/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+    }
+
+    function loadSourceSettings() {
+      setStatus("Loading source settings...", "warn");
+      return api("/api/settings/sources")
+        .then(function (payload) {
+          sourcePayload = payload;
+          renderSummary(payload);
+          renderSources(payload);
+          var summary = payload.summary || {};
+          setStatus(
+            "Loaded " + formatNumber(summary.active_sources || 0) + " active sources.",
+            "ok"
+          );
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to load source settings", "err");
+        });
+    }
+
+    function loadModelStatus() {
+      return api("/api/settings/model")
+        .then(function (payload) {
+          var settings = payload && payload.settings ? payload.settings : {};
+          var enabled = !!settings.external_enabled;
+          document.getElementById("privacy-model-status").textContent =
+            "External API: " + (enabled ? "Enabled" : "Disabled");
+        })
+        .catch(function () {
+          document.getElementById("privacy-model-status").textContent = "External API: unavailable";
+        });
+    }
+
+    function refreshStorageStats() {
+      return api("/api/stats")
+        .then(function (payload) {
+          document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.dbPath || "-");
+          document.getElementById("storage-db-stats").textContent =
+            "Sessions: " + formatNumber(payload.sessions || 0) + " · Messages: " + formatNumber(payload.messages || 0);
+          setStatus("Storage stats refreshed.", "ok");
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to refresh storage stats", "err");
+        });
+    }
+
+    function syncEnabledSources() {
+      setStatus("Syncing enabled sources...", "warn");
+      var btn = document.getElementById("btn-sync-enabled");
+      btn.disabled = true;
+      return api("/api/index", { method: "POST" })
+        .then(function (payload) {
+          document.getElementById("index-sync-meta").textContent =
+            "Indexed " + formatNumber(payload.sessions || 0) + " sessions, " + formatNumber(payload.messages || 0) + " messages.";
+          setStatus("Sync completed.", "ok");
+          return loadSourceSettings();
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Sync failed", "err");
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    }
+
+    function exportSourceSettings() {
+      if (!sourcePayload) {
+        setStatus("No source settings loaded yet.", "warn");
+        return;
+      }
+      var blob = new Blob([JSON.stringify(sourcePayload, null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "assistant-memory-source-settings.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("Source settings exported.", "ok");
+    }
+
+    document.getElementById("settings-nav").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-section]");
+      if (!btn) return;
+      activateSection(btn.getAttribute("data-section") || "data-sources");
+    });
+
+    document.getElementById("source-list").addEventListener("change", function (e) {
+      var toggle = e.target.closest(".source-toggle");
+      if (!toggle) return;
+      var card = findSourceCard(toggle);
+      var source = sourceFromCard(card);
+      if (!source) return;
+      patchSource(source, { enabled: !!toggle.checked })
+        .then(function () {
+          setStatus("Updated " + source + " state.", "ok");
+          return loadSourceSettings();
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to update source", "err");
+        });
+    });
+
+    document.getElementById("source-list").addEventListener("click", function (e) {
+      var card = findSourceCard(e.target);
+      if (!card) return;
+      var source = sourceFromCard(card);
+      if (!source) return;
+
+      if (e.target.closest(".sync-now")) {
+        setStatus("Syncing " + source + "...", "warn");
+        syncSource(source)
+          .then(function () {
+            setStatus("Synced " + source + ".", "ok");
+            return loadSourceSettings();
+          })
+          .catch(function (err) {
+            setStatus(err.message || "Sync failed", "err");
+          });
+        return;
+      }
+
+      if (e.target.closest(".configure-source")) {
+        var cfg = card.querySelector(".source-config");
+        if (cfg) cfg.classList.toggle("hidden");
+        return;
+      }
+
+      if (e.target.closest(".cancel-source")) {
+        var cfgCancel = card.querySelector(".source-config");
+        if (cfgCancel) cfgCancel.classList.add("hidden");
+        return;
+      }
+
+      if (e.target.closest(".save-source")) {
+        var modeEl = card.querySelector(".source-mode");
+        var pathEl = card.querySelector(".source-path-input");
+        var patch = {
+          mode: modeEl ? modeEl.value : "local_files",
+          path: pathEl ? pathEl.value : "",
+        };
+        patchSource(source, patch)
+          .then(function () {
+            setStatus("Saved config for " + source + ".", "ok");
+            return loadSourceSettings();
+          })
+          .catch(function (err) {
+            setStatus(err.message || "Failed to save source config", "err");
+          });
+      }
+    });
+
+    document.getElementById("btn-refresh-sources").addEventListener("click", function () {
+      void loadSourceSettings();
+    });
+    document.getElementById("btn-add-source").addEventListener("click", function () {
+      setStatus("Add source flow is reserved for a later beta iteration.", "warn");
+    });
+    document.getElementById("btn-sync-enabled").addEventListener("click", function () {
+      void syncEnabledSources();
+    });
+    document.getElementById("btn-storage-refresh").addEventListener("click", function () {
+      void refreshStorageStats();
+    });
+    document.getElementById("btn-export-settings").addEventListener("click", exportSourceSettings);
+
+    document.getElementById("display-compact").addEventListener("change", function () {
+      try {
+        localStorage.setItem("assistant-memory.display.compact", this.checked ? "true" : "false");
+      } catch (_err) {}
+      setStatus("Display preference saved locally.", "ok");
+    });
+
+    (function initDisplayPref() {
+      try {
+        var compact = localStorage.getItem("assistant-memory.display.compact") === "true";
+        document.getElementById("display-compact").checked = compact;
+      } catch (_err) {}
+    })();
+
+    Promise.all([loadSourceSettings(), loadModelStatus(), refreshStorageStats()]).catch(function () {});
+  </script>
+</body>
+</html>`;
+}
+
 function getQueryParams(url: string): URLSearchParams {
   try {
     return new URL(url, "http://localhost").searchParams;
@@ -1696,6 +2495,20 @@ const SOURCE_LABELS: Record<string, string> = {
   codex: "Codex",
   gemini: "Gemini",
 };
+
+const SOURCE_DESCRIPTIONS: Record<db.Source, string> = {
+  cursor: "Local SQLite database from Cursor editor sessions.",
+  copilot: "Copilot Chat conversation logs from VS Code / JetBrains.",
+  "cursor-cli": "Terminal-based Cursor CLI session history.",
+  "claude-code": "Anthropic Claude Code project session files.",
+  codex: "OpenAI Codex CLI local session files.",
+  gemini: "Google Gemini exported conversation files.",
+};
+
+function parseSourceKey(raw: string): db.Source | null {
+  if (!Object.prototype.hasOwnProperty.call(SOURCE_LABELS, raw)) return null;
+  return raw as db.Source;
+}
 
 function serveSearchApi(
   query: string,
@@ -1866,8 +2679,15 @@ export function createHandler() {
 
       if (path === "/api/index" && method === "POST") {
         try {
-          const stats = runIngest({});
-          sendJson(res, 200, { sessions: stats.sessions, messages: stats.messages });
+          const enabledSources = db.listEnabledSources();
+          const fallbackSources = (Object.keys(SOURCE_LABELS) as db.Source[]);
+          const sources = enabledSources.length > 0 ? enabledSources : fallbackSources;
+          const stats = runIngest({ sources });
+          const syncAt = Date.now();
+          for (const source of sources) {
+            db.updateSourceSettings(source, { last_sync_at: syncAt });
+          }
+          sendJson(res, 200, { sessions: stats.sessions, messages: stats.messages, sources, last_sync_at: syncAt });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Index failed";
           sendError(res, 500, "INDEX_FAILED", message);
@@ -2044,6 +2864,75 @@ export function createHandler() {
         return;
       }
 
+      const sourceUpdateMatch = path.match(/^\/api\/settings\/sources\/([a-z-]+)$/);
+      if (sourceUpdateMatch && method === "PUT") {
+        try {
+          const source = parseSourceKey(sourceUpdateMatch[1] ?? "");
+          if (!source) {
+            sendError(res, 400, "INVALID_ARGUMENT", "Unknown source");
+            return;
+          }
+          const body = await readJsonBody(req);
+          const patch: db.SourceSettingsPatch = {};
+          if (typeof body.enabled === "boolean") {
+            patch.enabled = body.enabled;
+          }
+          if (typeof body.path === "string") {
+            patch.path = body.path.trim();
+          }
+          if (
+            body.mode === "local_files" ||
+            body.mode === "file_import" ||
+            body.mode === "api"
+          ) {
+            patch.mode = body.mode;
+          }
+          if (typeof body.last_sync_at === "number" && Number.isFinite(body.last_sync_at)) {
+            patch.last_sync_at = Math.trunc(body.last_sync_at);
+          } else if (body.last_sync_at === null) {
+            patch.last_sync_at = null;
+          }
+          const updated = db.updateSourceSettings(source, patch);
+          sendJson(res, 200, { source: updated });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to update source settings";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      const sourceSyncMatch = path.match(/^\/api\/settings\/sources\/([a-z-]+)\/sync$/);
+      if (sourceSyncMatch && method === "POST") {
+        try {
+          const source = parseSourceKey(sourceSyncMatch[1] ?? "");
+          if (!source) {
+            sendError(res, 400, "INVALID_ARGUMENT", "Unknown source");
+            return;
+          }
+          const body = await readJsonBody(req);
+          const force = body.force === true;
+          const sourceSetting = db.getSourceSettings(source);
+          if (!sourceSetting.enabled && !force) {
+            sendError(res, 400, "SOURCE_DISABLED", "Source is disabled. Enable it before syncing.");
+            return;
+          }
+          const stats = runIngest({ sources: [source] });
+          const syncAt = Date.now();
+          const updated = db.updateSourceSettings(source, { last_sync_at: syncAt });
+          const aggregate = db.getSourceAggregates().find((item) => item.source === source);
+          sendJson(res, 200, {
+            source: updated,
+            aggregate: aggregate ?? { source, session_count: 0, message_count: 0, last_at: null },
+            stats,
+            last_sync_at: syncAt,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to sync source";
+          sendError(res, 500, "INDEX_FAILED", message);
+        }
+        return;
+      }
+
       if (path === "/api/stats" && method === "GET") {
         try {
           const stats = db.getStats();
@@ -2080,6 +2969,12 @@ export function createHandler() {
         return;
       }
 
+      if (path === "/settings") {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(getSettingsPage());
+        return;
+      }
+
       if (path === "/api/workspaces") {
         try {
           const params = getQueryParams(url);
@@ -2088,6 +2983,46 @@ export function createHandler() {
           sendJson(res, 200, { workspaces });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to list workspaces";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/settings/sources") {
+        try {
+          const sourceSettings = db.listSourceSettings();
+          const aggregateMap = new Map<string, db.SourceAggregate>();
+          for (const row of db.getSourceAggregates()) {
+            aggregateMap.set(row.source, row);
+          }
+          const summaryStats = db.getStats();
+          const sources = sourceSettings.map((item) => {
+            const aggregate = aggregateMap.get(item.source);
+            return {
+              source: item.source,
+              label: SOURCE_LABELS[item.source],
+              description: SOURCE_DESCRIPTIONS[item.source],
+              enabled: item.enabled,
+              mode: item.mode,
+              path: item.path,
+              last_sync_at: item.last_sync_at,
+              session_count: aggregate?.session_count ?? 0,
+              message_count: aggregate?.message_count ?? 0,
+              last_activity_at: aggregate?.last_at ?? null,
+            };
+          });
+          const activeSources = sources.reduce((count, s) => count + (s.enabled ? 1 : 0), 0);
+          sendJson(res, 200, {
+            summary: {
+              active_sources: activeSources,
+              total_sessions: summaryStats.sessions,
+              total_messages: summaryStats.messages,
+            },
+            db_path: db.getDbPath(),
+            sources,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to read source settings";
           sendError(res, 500, "DB_QUERY_FAILED", message);
         }
         return;

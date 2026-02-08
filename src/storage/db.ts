@@ -299,9 +299,11 @@ function buildSessionFilters(opts: SessionFilterOptions): {
   }
   const q = (opts.query ?? "").trim();
   if (q) {
-    clauses.push("(workspace LIKE ? OR external_id LIKE ?)");
+    // Search both session metadata AND message content via FTS
+    clauses.push("(workspace LIKE ? OR external_id LIKE ? OR id IN (SELECT DISTINCT session_id FROM messages WHERE id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)))");
     const like = "%" + q + "%";
-    params.push(like, like);
+    const ftsQuery = sanitizeFtsQuery(q);
+    params.push(like, like, ftsQuery);
   }
   if (typeof opts.timeFrom === "number" && Number.isFinite(opts.timeFrom)) {
     clauses.push("last_at >= ?");
@@ -370,6 +372,36 @@ export function getStats(): { sessions: number; messages: number } {
   const sessions = (database.prepare("SELECT COUNT(*) AS c FROM sessions").get() as { c: number }).c;
   const messages = (database.prepare("SELECT COUNT(*) AS c FROM messages").get() as { c: number }).c;
   return { sessions, messages };
+}
+
+export interface SourceAggregate {
+  source: Source;
+  session_count: number;
+  message_count: number;
+  last_at: number | null;
+}
+
+export function getSourceAggregates(): SourceAggregate[] {
+  const rows = getDb()
+    .prepare(`
+      SELECT source, COUNT(*) AS session_count, COALESCE(SUM(message_count), 0) AS message_count, MAX(last_at) AS last_at
+      FROM sessions
+      GROUP BY source
+    `)
+    .all() as Array<{
+      source: string;
+      session_count: number;
+      message_count: number;
+      last_at: number | null;
+    }>;
+  return rows
+    .filter((row) => SOURCES.includes(row.source as Source))
+    .map((row) => ({
+      source: row.source as Source,
+      session_count: row.session_count,
+      message_count: row.message_count,
+      last_at: row.last_at,
+    }));
 }
 
 export interface SessionDetail {
@@ -700,4 +732,115 @@ export function updateModelSettings(patch: Partial<ModelSettings>): ModelSetting
     setSetting(MODEL_SETTING_KEYS.keyRef, patch.key_ref);
   }
   return getModelSettings();
+}
+
+export type SourceMode = "local_files" | "file_import" | "api";
+
+export interface SourceSettings {
+  source: Source;
+  enabled: boolean;
+  mode: SourceMode;
+  path: string;
+  last_sync_at: number | null;
+}
+
+export interface SourceSettingsPatch {
+  enabled?: boolean;
+  mode?: SourceMode;
+  path?: string;
+  last_sync_at?: number | null;
+}
+
+const DEFAULT_SOURCE_SETTINGS: Record<Source, { enabled: boolean; mode: SourceMode; path: string }> = {
+  cursor: {
+    enabled: true,
+    mode: "local_files",
+    path: "~/.cursor/conversations",
+  },
+  copilot: {
+    enabled: true,
+    mode: "local_files",
+    path: "~/.config/github-copilot/conversations",
+  },
+  "cursor-cli": {
+    enabled: true,
+    mode: "local_files",
+    path: "~/.cursor-cli/history",
+  },
+  "claude-code": {
+    enabled: true,
+    mode: "local_files",
+    path: "~/.claude/projects",
+  },
+  codex: {
+    enabled: true,
+    mode: "local_files",
+    path: "~/.codex/sessions",
+  },
+  gemini: {
+    enabled: true,
+    mode: "file_import",
+    path: "~/.gemini/conversations",
+  },
+};
+
+type SourceSettingField = "enabled" | "mode" | "path" | "last_sync_at";
+
+function sourceSettingKey(source: Source, field: SourceSettingField): string {
+  return `source.${source}.${field}`;
+}
+
+function normalizeSourceMode(raw: string | null, fallback: SourceMode): SourceMode {
+  if (raw === "local_files" || raw === "file_import" || raw === "api") return raw;
+  return fallback;
+}
+
+function parseStoredNumber(raw: string | null): number | null {
+  if (raw === null || raw.trim() === "") return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function getSourceSettings(source: Source): SourceSettings {
+  const defaults = DEFAULT_SOURCE_SETTINGS[source];
+  const enabledRaw = getSettingRaw(sourceSettingKey(source, "enabled"));
+  const modeRaw = getSettingRaw(sourceSettingKey(source, "mode"));
+  const pathRaw = getSettingRaw(sourceSettingKey(source, "path"));
+  const lastSyncRaw = getSettingRaw(sourceSettingKey(source, "last_sync_at"));
+  return {
+    source,
+    enabled: enabledRaw === null ? defaults.enabled : enabledRaw === "true",
+    mode: normalizeSourceMode(modeRaw, defaults.mode),
+    path: pathRaw ?? defaults.path,
+    last_sync_at: parseStoredNumber(lastSyncRaw),
+  };
+}
+
+export function listSourceSettings(): SourceSettings[] {
+  return SOURCES.map((source) => getSourceSettings(source));
+}
+
+export function listEnabledSources(): Source[] {
+  return listSourceSettings()
+    .filter((item) => item.enabled)
+    .map((item) => item.source);
+}
+
+export function updateSourceSettings(source: Source, patch: SourceSettingsPatch): SourceSettings {
+  if (typeof patch.enabled === "boolean") {
+    setSetting(sourceSettingKey(source, "enabled"), patch.enabled ? "true" : "false");
+  }
+  if (typeof patch.mode === "string") {
+    const mode = normalizeSourceMode(patch.mode, DEFAULT_SOURCE_SETTINGS[source].mode);
+    setSetting(sourceSettingKey(source, "mode"), mode);
+  }
+  if (typeof patch.path === "string") {
+    setSetting(sourceSettingKey(source, "path"), patch.path.trim());
+  }
+  if (typeof patch.last_sync_at === "number" && Number.isFinite(patch.last_sync_at)) {
+    setSetting(sourceSettingKey(source, "last_sync_at"), String(Math.trunc(patch.last_sync_at)));
+  } else if (patch.last_sync_at === null) {
+    setSetting(sourceSettingKey(source, "last_sync_at"), "");
+  }
+  return getSourceSettings(source);
 }
