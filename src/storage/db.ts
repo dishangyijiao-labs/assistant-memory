@@ -74,12 +74,37 @@ export function getDb(): Database.Database {
     const schemaPath = join(__dirname, "schema.sql");
     const schema = readFileSync(schemaPath, "utf-8");
     db.exec(schema);
-    // Migration: add score_reasons_json column for existing databases
-    try {
-      db.exec("ALTER TABLE insight_reports ADD COLUMN score_reasons_json TEXT NOT NULL DEFAULT '[]'");
-    } catch {
-      // Column already exists — ignore
+    // Migrations for existing databases.
+    const insightReportColumnMigrations = [
+      "ALTER TABLE insight_reports ADD COLUMN score_reasons_json TEXT NOT NULL DEFAULT '[]'",
+      "ALTER TABLE insight_reports ADD COLUMN title TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE insight_reports ADD COLUMN details_json TEXT NOT NULL DEFAULT '{}'",
+      "ALTER TABLE insight_reports ADD COLUMN session_count INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE insight_reports ADD COLUMN message_count INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE insight_reports ADD COLUMN snippet_count INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE insight_reports ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'",
+    ];
+    for (const sql of insightReportColumnMigrations) {
+      try {
+        db.exec(sql);
+      } catch {
+        // Column already exists — ignore.
+      }
     }
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS insight_report_sessions (
+        id INTEGER PRIMARY KEY,
+        report_id INTEGER NOT NULL,
+        session_id INTEGER NOT NULL,
+        message_count INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        UNIQUE(report_id, session_id),
+        FOREIGN KEY (report_id) REFERENCES insight_reports(id) ON DELETE CASCADE,
+        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+      );
+    `);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_report_id ON insight_report_sessions(report_id)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_session_id ON insight_report_sessions(session_id)");
   }
   return db;
 }
@@ -434,6 +459,23 @@ export function getSessionDetail(
   return { session, messages };
 }
 
+export function listSessionsByIds(sessionIds: number[]): SessionListItem[] {
+  const ids = sessionIds
+    .map((id) => Math.trunc(id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = getDb()
+    .prepare(`
+      SELECT id, source, workspace, external_id, started_at, last_at, message_count
+      FROM sessions
+      WHERE id IN (${placeholders})
+      ORDER BY last_at DESC
+    `)
+    .all(...ids) as SessionListItem[];
+  return rows;
+}
+
 export interface InsightScope {
   workspace?: string;
   timeFrom?: number;
@@ -452,6 +494,31 @@ export interface InsightMessage {
 }
 
 const INSIGHT_MESSAGE_LIMIT = 50000;
+
+export function getMessagesForSessionIds(sessionIds: number[]): InsightMessage[] {
+  const ids = sessionIds
+    .map((id) => Math.trunc(id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  return getDb()
+    .prepare(`
+      SELECT
+        m.id AS message_id,
+        m.session_id AS session_id,
+        s.source AS source,
+        s.workspace AS workspace,
+        m.role AS role,
+        m.content AS content,
+        m.timestamp AS timestamp
+      FROM messages m
+      JOIN sessions s ON s.id = m.session_id
+      WHERE m.session_id IN (${placeholders})
+      ORDER BY m.timestamp ASC
+      LIMIT ?
+    `)
+    .all(...ids, INSIGHT_MESSAGE_LIMIT) as InsightMessage[];
+}
 
 export function getMessagesForInsightScope(scope: InsightScope): InsightMessage[] {
   const database = getDb();
@@ -498,6 +565,7 @@ export function getMessagesForInsightScope(scope: InsightScope): InsightMessage[
 
 export interface InsightReportRecord {
   id: number;
+  title: string;
   workspace: string;
   scope_json: string;
   model_mode: "local" | "external";
@@ -506,6 +574,11 @@ export interface InsightReportRecord {
   summary_md: string;
   patterns_json: string;
   feedback_json: string;
+  details_json: string;
+  session_count: number;
+  message_count: number;
+  snippet_count: number;
+  sources_json: string;
   score_efficiency: number;
   score_stability: number;
   score_decision_clarity: number;
@@ -526,6 +599,7 @@ export interface InsightEvidenceRecord {
 }
 
 export interface InsightReportInput {
+  title?: string;
   workspace: string;
   scopeJson: string;
   modelMode: "local" | "external";
@@ -534,6 +608,11 @@ export interface InsightReportInput {
   summaryMd: string;
   patternsJson: string;
   feedbackJson: string;
+  detailsJson?: string;
+  sessionCount?: number;
+  messageCount?: number;
+  snippetCount?: number;
+  sourcesJson?: string;
   scoreEfficiency: number;
   scoreStability: number;
   scoreDecisionClarity: number;
@@ -553,13 +632,15 @@ export function insertInsightReport(input: InsightReportInput): number {
   const row = getDb()
     .prepare(`
       INSERT INTO insight_reports (
-        workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+        title, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+        details_json, session_count, message_count, snippet_count, sources_json,
         score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING id
     `)
     .get(
+      input.title ?? "",
       input.workspace,
       input.scopeJson,
       input.modelMode,
@@ -568,6 +649,11 @@ export function insertInsightReport(input: InsightReportInput): number {
       input.summaryMd,
       input.patternsJson,
       input.feedbackJson,
+      input.detailsJson ?? "{}",
+      input.sessionCount ?? 0,
+      input.messageCount ?? 0,
+      input.snippetCount ?? 0,
+      input.sourcesJson ?? "[]",
       input.scoreEfficiency,
       input.scoreStability,
       input.scoreDecisionClarity,
@@ -594,6 +680,59 @@ export function insertInsightEvidence(reportId: number, evidence: InsightEvidenc
   txn(evidence);
 }
 
+export interface InsightReportSessionInput {
+  sessionId: number;
+  messageCount: number;
+}
+
+export interface InsightReportSessionRecord {
+  id: number;
+  report_id: number;
+  session_id: number;
+  message_count: number;
+  created_at: number;
+  source: string;
+  workspace: string;
+  external_id: string;
+  last_at: number;
+}
+
+export function insertInsightReportSessions(reportId: number, sessions: InsightReportSessionInput[]): void {
+  if (sessions.length === 0) return;
+  const now = Date.now();
+  const stmt = getDb().prepare(`
+    INSERT INTO insight_report_sessions (report_id, session_id, message_count, created_at)
+    VALUES (?, ?, ?, ?)
+  `);
+  const txn = getDb().transaction((items: InsightReportSessionInput[]) => {
+    for (const item of items) {
+      stmt.run(reportId, item.sessionId, Math.max(0, Math.trunc(item.messageCount)), now);
+    }
+  });
+  txn(sessions);
+}
+
+export function listInsightReportSessions(reportId: number): InsightReportSessionRecord[] {
+  return getDb()
+    .prepare(`
+      SELECT
+        rs.id,
+        rs.report_id,
+        rs.session_id,
+        rs.message_count,
+        rs.created_at,
+        s.source,
+        s.workspace,
+        s.external_id,
+        s.last_at
+      FROM insight_report_sessions rs
+      JOIN sessions s ON s.id = rs.session_id
+      WHERE rs.report_id = ?
+      ORDER BY rs.id ASC
+    `)
+    .all(reportId) as InsightReportSessionRecord[];
+}
+
 export function listInsightReports(
   opts: { workspace?: string; limit?: number; offset?: number } = {}
 ): InsightReportRecord[] {
@@ -602,7 +741,8 @@ export function listInsightReports(
   const offset = Math.max(0, opts.offset ?? 0);
   const stmt = getDb().prepare(`
     SELECT
-      id, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+      id, title, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+      details_json, session_count, message_count, snippet_count, sources_json,
       score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
     FROM insight_reports
     ${where}
@@ -626,14 +766,54 @@ export function countInsightReports(workspace?: string): number {
   return row.c;
 }
 
+export function getInsightReportAggregates(workspace?: string): {
+  total_reports: number;
+  sessions_analyzed: number;
+  messages_analyzed: number;
+} {
+  if (workspace && workspace.trim()) {
+    const row = getDb()
+      .prepare(`
+        SELECT
+          COUNT(*) AS total_reports,
+          COALESCE(SUM(session_count), 0) AS sessions_analyzed,
+          COALESCE(SUM(message_count), 0) AS messages_analyzed
+        FROM insight_reports
+        WHERE workspace = ?
+      `)
+      .get(workspace.trim()) as {
+      total_reports: number;
+      sessions_analyzed: number;
+      messages_analyzed: number;
+    };
+    return row;
+  }
+  const row = getDb()
+    .prepare(`
+      SELECT
+        COUNT(*) AS total_reports,
+        COALESCE(SUM(session_count), 0) AS sessions_analyzed,
+        COALESCE(SUM(message_count), 0) AS messages_analyzed
+      FROM insight_reports
+    `)
+    .get() as {
+    total_reports: number;
+    sessions_analyzed: number;
+    messages_analyzed: number;
+  };
+  return row;
+}
+
 export function getInsightReportById(reportId: number): {
   report: InsightReportRecord;
   evidence: InsightEvidenceRecord[];
+  sessions: InsightReportSessionRecord[];
 } | null {
   const report = getDb()
     .prepare(`
       SELECT
-        id, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+        id, title, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
+        details_json, session_count, message_count, snippet_count, sources_json,
         score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
       FROM insight_reports
       WHERE id = ?
@@ -648,7 +828,13 @@ export function getInsightReportById(reportId: number): {
       ORDER BY id ASC
     `)
     .all(reportId) as InsightEvidenceRecord[];
-  return { report, evidence };
+  const sessions = listInsightReportSessions(reportId);
+  return { report, evidence, sessions };
+}
+
+export function deleteInsightReport(reportId: number): boolean {
+  const out = getDb().prepare("DELETE FROM insight_reports WHERE id = ?").run(reportId);
+  return out.changes > 0;
 }
 
 const MODEL_SETTING_KEYS = {

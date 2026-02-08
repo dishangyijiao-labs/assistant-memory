@@ -51,6 +51,7 @@ END;
 
 CREATE TABLE IF NOT EXISTS insight_reports (
   id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
   workspace TEXT NOT NULL,
   scope_json TEXT NOT NULL,
   model_mode TEXT NOT NULL,
@@ -59,6 +60,11 @@ CREATE TABLE IF NOT EXISTS insight_reports (
   summary_md TEXT NOT NULL,
   patterns_json TEXT NOT NULL,
   feedback_json TEXT NOT NULL,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  session_count INTEGER NOT NULL DEFAULT 0,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  snippet_count INTEGER NOT NULL DEFAULT 0,
+  sources_json TEXT NOT NULL DEFAULT '[]',
   score_efficiency INTEGER NOT NULL,
   score_stability INTEGER NOT NULL,
   score_decision_clarity INTEGER NOT NULL,
@@ -89,6 +95,20 @@ CREATE TABLE IF NOT EXISTS insight_evidence (
 CREATE INDEX IF NOT EXISTS idx_insight_evidence_report_id ON insight_evidence(report_id);
 CREATE INDEX IF NOT EXISTS idx_insight_evidence_message_id ON insight_evidence(message_id);
 
+CREATE TABLE IF NOT EXISTS insight_report_sessions (
+  id INTEGER PRIMARY KEY,
+  report_id INTEGER NOT NULL,
+  session_id INTEGER NOT NULL,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  UNIQUE(report_id, session_id),
+  FOREIGN KEY (report_id) REFERENCES insight_reports(id) ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_report_id ON insight_report_sessions(report_id);
+CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_session_id ON insight_report_sessions(session_id);
+
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -96,4 +116,3 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_workspace_last_at ON sessions(workspace, last_at DESC);
-
