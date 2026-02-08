@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistant Memory Desktop</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #2f81f7;
+      --accent-hover: #1f6feb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #111827, #0d1117 50%, #090c11);
+      color: var(--text);
+      font-family: "SF Mono", "Consolas", "Monaco", monospace;
+      padding: 1.5rem;
+    }
+    .card {
+      width: min(560px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(22, 27, 34, 0.95);
+      padding: 1.2rem;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+    p {
+      margin: 0.45rem 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.95rem;
+    }
+    button, a {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-size: 0.8rem;
+      text-decoration: none;
+      cursor: pointer;
+      padding: 0.48rem 0.8rem;
+    }
+    button:hover, a:hover { background: var(--accent-hover); }
+    .muted-btn {
+      background: transparent;
+      color: var(--text);
+    }
+    #status {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-height: 1.1rem;
+    }
+    code {
+      background: #0b0f14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.08rem 0.3rem;
+      color: #c9d1d9;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Assistant Memory Desktop</h1>
+    <p>Waiting for local backend at <code id="target-url"></code>.</p>
+    <p>If this takes too long, click retry or open the web app manually.</p>
+    <div class="row">
+      <button id="retry">Retry</button>
+      <a id="open-web" href="http://127.0.0.1:3939/" target="_blank" rel="noreferrer noopener">Open Web</a>
+      <a id="open-insights" class="muted-btn" href="http://127.0.0.1:3939/insights" target="_blank" rel="noreferrer noopener">Open Insights</a>
+    </div>
+    <div id="status"></div>
+  </div>
+  <script>
+    (function () {
+      var port = 3939;
+      var origin = "http://127.0.0.1:" + port;
+      var statusEl = document.getElementById("status");
+      var targetEl = document.getElementById("target-url");
+      var openWeb = document.getElementById("open-web");
+      var openInsights = document.getElementById("open-insights");
+      targetEl.textContent = origin;
+      openWeb.href = origin + "/";
+      openInsights.href = origin + "/insights";
+
+      var attempts = 0;
+      var maxAttempts = 60;
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function checkReady() {
+        attempts += 1;
+        setStatus("Checking backend (" + attempts + "/" + maxAttempts + ") ...");
+        fetch(origin + "/api/stats", { method: "GET" })
+          .then(function (res) {
+            if (!res.ok) throw new Error("not-ready");
+            return res.json();
+          })
+          .then(function () {
+            setStatus("Backend ready. Redirecting ...");
+            window.location.href = origin + "/";
+          })
+          .catch(function () {
+            if (attempts >= maxAttempts) {
+              setStatus("Backend not ready. Please retry or use Open Web.");
+              return;
+            }
+            setTimeout(checkReady, 1000);
+          });
+      }
+
+      document.getElementById("retry").addEventListener("click", function () {
+        attempts = 0;
+        checkReady();
+      });
+
+      checkReady();
+    })();
+  </script>
+</body>
+</html>
