@@ -72,13 +72,15 @@ function getSearchPage(): string {
 
     .filter-chips { display: flex; gap: 0.5rem; }
     .chip-select {
-      flex: 1; padding: 0.4rem 1.6rem 0.4rem 0.6rem;
+      flex: 1; min-width: 0; max-width: 100%;
+      padding: 0.4rem 1.6rem 0.4rem 0.6rem;
       font: inherit; font-size: 0.8rem;
       background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 8px;
       color: var(--text); cursor: pointer;
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 0.5rem center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .chip-select:focus { outline: none; border-color: var(--accent); }
 
