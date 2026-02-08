@@ -74,6 +74,12 @@ export function getDb(): Database.Database {
     const schemaPath = join(__dirname, "schema.sql");
     const schema = readFileSync(schemaPath, "utf-8");
     db.exec(schema);
+    // Migration: add score_reasons_json column for existing databases
+    try {
+      db.exec("ALTER TABLE insight_reports ADD COLUMN score_reasons_json TEXT NOT NULL DEFAULT '[]'");
+    } catch {
+      // Column already exists — ignore
+    }
   }
   return db;
 }
@@ -157,12 +163,23 @@ export function listMessages(
   return stmt.all(...params) as MessageResult[];
 }
 
+function sanitizeFtsQuery(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '""';
+  const cleaned = trimmed.replace(/["""*(){}[\]^~:;!@#$%&\\|/<>]/g, " ").trim();
+  if (!cleaned) return '""';
+  const tokens = cleaned.split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return '""';
+  return '"' + tokens.join(" ") + '"';
+}
+
 export function searchMessages(
   query: string,
   limit: number = 50,
   source?: Source
 ): MessageResult[] {
   const database = getDb();
+  const ftsQuery = sanitizeFtsQuery(query);
   const whereSource = source ? "AND s.source = ?" : "";
   const stmt = database.prepare(`
     SELECT
@@ -180,7 +197,7 @@ export function searchMessages(
     ORDER BY s.last_at DESC
     LIMIT ?
   `);
-  const params: Array<string | number> = [query];
+  const params: Array<string | number> = [ftsQuery];
   if (source) params.push(source);
   params.push(limit);
   return stmt.all(...params) as MessageResult[];
@@ -402,6 +419,8 @@ export interface InsightMessage {
   timestamp: number;
 }
 
+const INSIGHT_MESSAGE_LIMIT = 50000;
+
 export function getMessagesForInsightScope(scope: InsightScope): InsightMessage[] {
   const database = getDb();
   const clauses: string[] = ["1=1"];
@@ -439,7 +458,9 @@ export function getMessagesForInsightScope(scope: InsightScope): InsightMessage[
     JOIN sessions s ON s.id = m.session_id
     WHERE ${whereSql}
     ORDER BY m.timestamp ASC
+    LIMIT ?
   `);
+  params.push(INSIGHT_MESSAGE_LIMIT);
   return stmt.all(...params) as InsightMessage[];
 }
 
@@ -456,6 +477,7 @@ export interface InsightReportRecord {
   score_efficiency: number;
   score_stability: number;
   score_decision_clarity: number;
+  score_reasons_json: string;
   status: "completed" | "failed";
   created_at: number;
   updated_at: number;
@@ -483,6 +505,7 @@ export interface InsightReportInput {
   scoreEfficiency: number;
   scoreStability: number;
   scoreDecisionClarity: number;
+  scoreReasonsJson?: string;
   status?: "completed" | "failed";
 }
 
@@ -499,9 +522,9 @@ export function insertInsightReport(input: InsightReportInput): number {
     .prepare(`
       INSERT INTO insight_reports (
         workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
-        score_efficiency, score_stability, score_decision_clarity, status, created_at, updated_at
+        score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING id
     `)
     .get(
@@ -516,6 +539,7 @@ export function insertInsightReport(input: InsightReportInput): number {
       input.scoreEfficiency,
       input.scoreStability,
       input.scoreDecisionClarity,
+      input.scoreReasonsJson ?? "[]",
       input.status ?? "completed",
       now,
       now
@@ -547,7 +571,7 @@ export function listInsightReports(
   const stmt = getDb().prepare(`
     SELECT
       id, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
-      score_efficiency, score_stability, score_decision_clarity, status, created_at, updated_at
+      score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
     FROM insight_reports
     ${where}
     ORDER BY created_at DESC
@@ -578,7 +602,7 @@ export function getInsightReportById(reportId: number): {
     .prepare(`
       SELECT
         id, workspace, scope_json, model_mode, provider, model_name, summary_md, patterns_json, feedback_json,
-        score_efficiency, score_stability, score_decision_clarity, status, created_at, updated_at
+        score_efficiency, score_stability, score_decision_clarity, score_reasons_json, status, created_at, updated_at
       FROM insight_reports
       WHERE id = ?
     `)

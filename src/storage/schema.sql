@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS insight_reports (
   score_efficiency INTEGER NOT NULL,
   score_stability INTEGER NOT NULL,
   score_decision_clarity INTEGER NOT NULL,
+  score_reasons_json TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'completed',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
@@ -95,3 +96,4 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_workspace_last_at ON sessions(workspace, last_at DESC);
+
