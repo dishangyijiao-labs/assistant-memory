@@ -1,0 +1,381 @@
+export const settingsScript = `
+  <script>
+    var sectionMeta = {
+      "data-sources": {
+        title: "Data Sources",
+        sub: "Configure where Assistant Memory reads your AI conversation data."
+      },
+      "index-sync": {
+        title: "Index & Sync",
+        sub: "Control manual indexing and source sync operations."
+      },
+      "storage": {
+        title: "Storage",
+        sub: "Inspect the local database path and indexed volume."
+      },
+      "display": {
+        title: "Display",
+        sub: "Configure viewing preferences for the desktop client."
+      },
+      "privacy-security": {
+        title: "Privacy & Security",
+        sub: "Review external API status and privacy boundaries."
+      },
+      "export-backup": {
+        title: "Export & Backup",
+        sub: "Export reusable settings artifacts from this machine."
+      }
+    };
+
+    var modeLabel = {
+      local_files: "Local Files",
+      file_import: "File Import",
+      api: "API"
+    };
+
+    var sourcePayload = null;
+
+    function safeText(v) {
+      return typeof v === "string" ? v : "";
+    }
+
+    function escapeHtml(v) {
+      return safeText(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function formatNumber(v) {
+      var n = typeof v === "number" ? v : 0;
+      return n.toLocaleString();
+    }
+
+    function formatTime(ts) {
+      if (!ts) return "Never";
+      var d = new Date(ts);
+      if (isNaN(d.getTime())) return "Unknown";
+      return d.toLocaleString();
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return "never";
+      var delta = Date.now() - ts;
+      if (delta < 60000) return "just now";
+      if (delta < 3600000) return Math.round(delta / 60000) + " min ago";
+      if (delta < 86400000) return Math.round(delta / 3600000) + " hr ago";
+      return Math.round(delta / 86400000) + " day ago";
+    }
+
+    function setStatus(message, kind) {
+      var el = document.getElementById("status");
+      el.className = "status";
+      if (kind) el.classList.add(kind);
+      el.textContent = message || "";
+    }
+
+    function parseError(payload) {
+      if (!payload) return "Request failed";
+      if (typeof payload.error === "string") return payload.error;
+      if (payload.error && typeof payload.error.message === "string") return payload.error.message;
+      return "Request failed";
+    }
+
+    function api(path, options) {
+      return fetch(path, options || {}).then(function (res) {
+        return res.text().then(function (text) {
+          var payload = {};
+          try { payload = text ? JSON.parse(text) : {}; } catch (_e) {}
+          if (!res.ok) throw new Error(parseError(payload));
+          return payload;
+        });
+      });
+    }
+
+    function activateSection(sectionId) {
+      var title = document.getElementById("section-title");
+      var sub = document.getElementById("section-sub");
+      var meta = sectionMeta[sectionId] || sectionMeta["data-sources"];
+      title.textContent = meta.title;
+      sub.textContent = meta.sub;
+
+      document.querySelectorAll("#settings-nav button").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-section") === sectionId);
+      });
+      document.querySelectorAll(".section").forEach(function (sec) {
+        sec.classList.toggle("active", sec.id === "section-" + sectionId);
+      });
+    }
+
+    function renderSummary(payload) {
+      var summary = payload && payload.summary ? payload.summary : {};
+      document.getElementById("summary-active").textContent = formatNumber(summary.active_sources || 0);
+      document.getElementById("summary-sessions").textContent = formatNumber(summary.total_sessions || 0);
+      document.getElementById("summary-messages").textContent = formatNumber(summary.total_messages || 0);
+      document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.db_path || "-");
+      document.getElementById("storage-db-stats").textContent =
+        "Sessions: " + formatNumber(summary.total_sessions || 0) + " · Messages: " + formatNumber(summary.total_messages || 0);
+    }
+
+    function renderModeOptions(selected) {
+      var opts = ["local_files", "file_import", "api"];
+      return opts.map(function (mode) {
+        var label = modeLabel[mode] || mode;
+        var sel = mode === selected ? " selected" : "";
+        return '<option value="' + mode + '"' + sel + ">" + escapeHtml(label) + "</option>";
+      }).join("");
+    }
+
+    function renderSources(payload) {
+      var list = (payload && payload.sources) || [];
+      var host = document.getElementById("source-list");
+      if (!list.length) {
+        host.innerHTML = '<div class="section-card"><div class="muted">No source configuration available.</div></div>';
+        return;
+      }
+      host.innerHTML = list.map(function (s) {
+        var source = safeText(s.source);
+        var label = safeText(s.label || source);
+        var kind = modeLabel[s.mode] || safeText(s.mode);
+        var enabled = !!s.enabled;
+        var cardCls = "source-card" + (enabled ? "" : " disabled");
+        var icon = label ? label.charAt(0).toUpperCase() : "?";
+        return '<div class="' + cardCls + '" data-source="' + escapeHtml(source) + '">' +
+          '<div class="source-top">' +
+            '<div class="source-main">' +
+              '<div class="source-icon">' + escapeHtml(icon) + '</div>' +
+              '<div>' +
+                '<div class="source-title-row"><span class="source-title">' + escapeHtml(label) + '</span><span class="source-kind">' + escapeHtml(kind) + '</span></div>' +
+                '<div class="source-path">' + escapeHtml(safeText(s.path || "")) + '</div>' +
+                '<div class="source-desc">' + escapeHtml(safeText(s.description || "")) + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<label class="switch">' +
+              '<input class="source-toggle" type="checkbox"' + (enabled ? " checked" : "") + " />" +
+              '<span class="slider"></span>' +
+            '</label>' +
+          '</div>' +
+          '<div class="source-meta">' +
+            '<span>' + formatNumber(s.session_count || 0) + ' sessions</span>' +
+            '<span>' + formatNumber(s.message_count || 0) + ' messages</span>' +
+            '<span>Last activity: ' + escapeHtml(timeAgo(s.last_activity_at)) + '</span>' +
+            '<span>Last sync: ' + escapeHtml(timeAgo(s.last_sync_at)) + '</span>' +
+          '</div>' +
+          '<div class="source-actions">' +
+            '<button type="button" class="btn sync-now">Sync Now</button>' +
+            '<button type="button" class="btn configure-source">Configure</button>' +
+          '</div>' +
+          '<div class="source-config hidden">' +
+            '<select class="source-mode">' + renderModeOptions(safeText(s.mode)) + '</select>' +
+            '<input class="source-path-input" type="text" value="' + escapeHtml(safeText(s.path)) + '" placeholder="Source path" />' +
+            '<div class="row" style="margin-top:0;">' +
+              '<button type="button" class="btn primary save-source">Save</button>' +
+              '<button type="button" class="btn cancel-source">Cancel</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function findSourceCard(node) {
+      if (!node || !node.closest) return null;
+      return node.closest(".source-card[data-source]");
+    }
+
+    function sourceFromCard(card) {
+      if (!card) return "";
+      return card.getAttribute("data-source") || "";
+    }
+
+    function patchSource(source, patch) {
+      return api("/api/settings/sources/" + encodeURIComponent(source), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch || {}),
+      });
+    }
+
+    function syncSource(source) {
+      return api("/api/settings/sources/" + encodeURIComponent(source) + "/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+    }
+
+    function loadSourceSettings() {
+      setStatus("Loading source settings...", "warn");
+      return api("/api/settings/sources")
+        .then(function (payload) {
+          sourcePayload = payload;
+          renderSummary(payload);
+          renderSources(payload);
+          var summary = payload.summary || {};
+          setStatus(
+            "Loaded " + formatNumber(summary.active_sources || 0) + " active sources.",
+            "ok"
+          );
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to load source settings", "err");
+        });
+    }
+
+    function loadModelStatus() {
+      return api("/api/settings/model")
+        .then(function (payload) {
+          var settings = payload && payload.settings ? payload.settings : {};
+          var enabled = !!settings.external_enabled;
+          document.getElementById("privacy-model-status").textContent =
+            "External API: " + (enabled ? "Enabled" : "Disabled");
+        })
+        .catch(function () {
+          document.getElementById("privacy-model-status").textContent = "External API: unavailable";
+        });
+    }
+
+    function refreshStorageStats() {
+      return api("/api/stats")
+        .then(function (payload) {
+          document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.dbPath || "-");
+          document.getElementById("storage-db-stats").textContent =
+            "Sessions: " + formatNumber(payload.sessions || 0) + " · Messages: " + formatNumber(payload.messages || 0);
+          setStatus("Storage stats refreshed.", "ok");
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to refresh storage stats", "err");
+        });
+    }
+
+    function syncEnabledSources() {
+      setStatus("Syncing enabled sources...", "warn");
+      var btn = document.getElementById("btn-sync-enabled");
+      btn.disabled = true;
+      return api("/api/index", { method: "POST" })
+        .then(function (payload) {
+          document.getElementById("index-sync-meta").textContent =
+            "Indexed " + formatNumber(payload.sessions || 0) + " sessions, " + formatNumber(payload.messages || 0) + " messages.";
+          setStatus("Sync completed.", "ok");
+          return loadSourceSettings();
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Sync failed", "err");
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    }
+
+    function exportSourceSettings() {
+      if (!sourcePayload) {
+        setStatus("No source settings loaded yet.", "warn");
+        return;
+      }
+      var blob = new Blob([JSON.stringify(sourcePayload, null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "assistant-memory-source-settings.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("Source settings exported.", "ok");
+    }
+
+    document.getElementById("settings-nav").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-section]");
+      if (!btn) return;
+      activateSection(btn.getAttribute("data-section") || "data-sources");
+    });
+
+    document.getElementById("source-list").addEventListener("change", function (e) {
+      var toggle = e.target.closest(".source-toggle");
+      if (!toggle) return;
+      var card = findSourceCard(toggle);
+      var source = sourceFromCard(card);
+      if (!source) return;
+      patchSource(source, { enabled: !!toggle.checked })
+        .then(function () {
+          setStatus("Updated " + source + " state.", "ok");
+          return loadSourceSettings();
+        })
+        .catch(function (err) {
+          setStatus(err.message || "Failed to update source", "err");
+        });
+    });
+
+    document.getElementById("source-list").addEventListener("click", function (e) {
+      var card = findSourceCard(e.target);
+      if (!card) return;
+      var source = sourceFromCard(card);
+      if (!source) return;
+
+      if (e.target.closest(".sync-now")) {
+        setStatus("Syncing " + source + "...", "warn");
+        syncSource(source)
+          .then(function () {
+            setStatus("Synced " + source + ".", "ok");
+            return loadSourceSettings();
+          })
+          .catch(function (err) {
+            setStatus(err.message || "Sync failed", "err");
+          });
+        return;
+      }
+
+      if (e.target.closest(".configure-source")) {
+        var cfg = card.querySelector(".source-config");
+        if (cfg) cfg.classList.toggle("hidden");
+        return;
+      }
+
+      if (e.target.closest(".cancel-source")) {
+        var cfgCancel = card.querySelector(".source-config");
+        if (cfgCancel) cfgCancel.classList.add("hidden");
+        return;
+      }
+
+      if (e.target.closest(".save-source")) {
+        var modeEl = card.querySelector(".source-mode");
+        var pathEl = card.querySelector(".source-path-input");
+        var patch = {
+          mode: modeEl ? modeEl.value : "local_files",
+          path: pathEl ? pathEl.value : "",
+        };
+        patchSource(source, patch)
+          .then(function () {
+            setStatus("Saved config for " + source + ".", "ok");
+            return loadSourceSettings();
+          })
+          .catch(function (err) {
+            setStatus(err.message || "Failed to save source config", "err");
+          });
+      }
+    });
+
+    document.getElementById("btn-refresh-sources").addEventListener("click", function () {
+      void loadSourceSettings();
+    });
+    document.getElementById("btn-add-source").addEventListener("click", function () {
+      setStatus("Add source flow is reserved for a later beta iteration.", "warn");
+    });
+    document.getElementById("btn-sync-enabled").addEventListener("click", function () {
+      void syncEnabledSources();
+    });
+    document.getElementById("btn-storage-refresh").addEventListener("click", function () {
+      void refreshStorageStats();
+    });
+    document.getElementById("btn-export-settings").addEventListener("click", exportSourceSettings);
+
+    document.getElementById("display-compact").addEventListener("change", function () {
+      try {
+        localStorage.setItem("assistant-memory.display.compact", this.checked ? "true" : "false");
+      } catch (_err) {}
+      setStatus("Display preference saved locally.", "ok");
+    });
+
+    (function initDisplayPref() {
+      try {
+        var compact = localStorage.getItem("assistant-memory.display.compact") === "true";
+        document.getElementById("display-compact").checked = compact;
+      } catch (_err) {}
+    })();
+
+    Promise.all([loadSourceSettings(), loadModelStatus(), refreshStorageStats()]).catch(function () {});
+  </script>
+`;

@@ -1,0 +1,66 @@
+import { insightsReportsStyles } from "./insights-reports-styles.js";
+import { insightsReportsScript } from "./insights-reports-script.js";
+
+export default function getInsightsReportsPage(): string {
+  const bodyHtml = `
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-head">Assistant Memory</div>
+      <div class="sidebar-filter">
+        <select id="sb-source" class="source-select">
+          <option value="">Source: All</option>
+          <option value="cursor">Cursor IDE</option>
+          <option value="copilot">Copilot</option>
+          <option value="cursor-cli">Cursor CLI</option>
+          <option value="claude-code">Claude Code</option>
+          <option value="codex">Codex</option>
+          <option value="gemini">Gemini</option>
+        </select>
+        <div class="chip-row">
+          <select class="chip-select"><option>Workspace</option></select>
+          <select class="chip-select"><option>Time Range</option></select>
+        </div>
+        <div class="search-wrap">
+          <input id="sb-search" class="search-input" type="search" placeholder="Search..." />
+        </div>
+      </div>
+      <div id="sb-sessions" class="session-list"></div>
+      <div class="pager">
+        <button id="sb-prev" type="button">&#8249;</button>
+        <span id="sb-page">Page 1</span>
+        <button id="sb-next" type="button">&#8250;</button>
+      </div>
+      <div class="sidebar-foot">
+        <button type="button" class="btn-settings" id="sb-settings" title="Settings">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>
+          <span class="settings-label">Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="main-top"></div>
+      <div id="main-extra"></div>
+      <div class="content">
+        <div id="status" class="status"></div>
+        <div id="insights-root"></div>
+      </div>
+    </main>
+  </div>
+
+`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistant Memory - Insights Reports</title>
+${insightsReportsStyles}
+${bodyHtml}
+${insightsReportsScript}
+</body>
+</html>`;
+}

@@ -20,6 +20,10 @@
     "search": "node dist/index.js search",
     "serve": "node dist/index.js serve",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "desktop:prepare": "mkdir -p src-tauri/resources && rm -rf src-tauri/resources/dist && cp -R dist src-tauri/resources/dist",
     "desktop:dev": "npx @tauri-apps/cli@latest dev",
     "desktop:build": "npx @tauri-apps/cli@latest build",
@@ -51,6 +55,10 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.7.0"
   }
 }
