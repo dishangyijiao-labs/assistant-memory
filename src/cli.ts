@@ -1,11 +1,12 @@
 import { Command } from "commander";
 import { runIngest } from "./ingest/index.js";
 import * as db from "./storage/db.js";
+import { startServer } from "./web/server.js";
 
 const program = new Command();
 
 program
-  .name("assistant-memory")
+  .name("assistmem")
   .description("Index and search Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI locally (no login).")
   .version("0.1.0");
 
@@ -31,7 +32,7 @@ program
     const limit = Math.min(100, Math.max(1, parseInt(opts.limit ?? "20", 10)));
     const results = db.searchMessages(query, limit);
     if (results.length === 0) {
-      console.log("No matches. Try 'assistant-memory index' first, or a different query.");
+      console.log("No matches. Try 'assistmem index' first, or a different query.");
       return;
     }
     for (const r of results) {
@@ -50,6 +51,15 @@ program
     const stats = db.getStats();
     console.log("Database:", db.getDbPath());
     console.log("Sessions:", stats.sessions, "Messages:", stats.messages);
+  });
+
+program
+  .command("serve")
+  .description("Start web server for search in the browser.")
+  .option("-p, --port <number>", "Port (default 3000)", "3000")
+  .action((opts: { port?: string }) => {
+    const port = parseInt(opts.port ?? "3000", 10) || 3000;
+    startServer(port);
   });
 
 export function run(): void {

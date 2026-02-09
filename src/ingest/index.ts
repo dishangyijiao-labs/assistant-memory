@@ -54,6 +54,7 @@ export function runIngest(options: IngestOptions = {}): { sessions: number; mess
         message_count: raw.messages.length,
       };
       const sessionId = db.upsertSession(session);
+      db.clearSessionMessages(sessionId);
       for (const m of raw.messages) {
         const msg: NormalizedMessage = {
           session_external: raw.external_id,

@@ -1,11 +1,11 @@
 {
-  "name": "assistant-memory",
+  "name": "assistmem",
   "version": "0.1.0",
   "description": "Local indexer and keyword search for Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI. No login.",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "assistant-memory": "dist/index.js"
+    "assistmem": "dist/index.js"
   },
   "files": [
     "dist",
@@ -13,11 +13,21 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && cp src/storage/schema.sql dist/storage/",
+    "build": "npx tsc && cp src/storage/schema.sql dist/storage/",
+    "postbuild": "node -e \"const fs=require('fs');try{fs.chmodSync('dist/index.js',0o755);}catch(e){if(e.code!=='ENOENT')throw e;}\"",
     "start": "node dist/index.js",
     "index": "node dist/index.js index",
     "search": "node dist/index.js search",
-    "typecheck": "tsc --noEmit"
+    "serve": "node dist/index.js serve",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "desktop:prepare": "mkdir -p src-tauri/resources && rm -rf src-tauri/resources/dist && cp -R dist src-tauri/resources/dist",
+    "desktop:dev": "npx @tauri-apps/cli@latest dev",
+    "desktop:build": "npx @tauri-apps/cli@latest build",
+    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "keywords": [
     "cursor",
@@ -33,7 +43,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dishangyijiao/assistant-memory.git"
+    "url": "git+https://github.com/dishangyijiao/assistmem.git"
   },
   "engines": {
     "node": ">=18"
@@ -45,6 +55,10 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.7.0"
   }
 }

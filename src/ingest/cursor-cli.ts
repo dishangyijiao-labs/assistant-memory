@@ -34,9 +34,10 @@ export function ingestCursorCli(): RawSession[] {
     try {
       const db = new Database(globalState, { readonly: true });
       for (const key of CURSOR_KEYS) {
-        const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as { value: string } | undefined;
-        if (!row?.value) continue;
-        const data = parseCursorChatData(row.value);
+        const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as { value: unknown } | undefined;
+        const text = row?.value ? asText(row.value) : null;
+        if (!text) continue;
+        const data = parseCursorChatData(text);
         for (const s of data) {
           s.source = "cursor-cli";
           s.workspace = s.workspace || "global";
@@ -72,6 +73,14 @@ export function ingestCursorCli(): RawSession[] {
   }
 
   return sessions;
+}
+
+function asText(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && Buffer.isBuffer(value)) {
+    return value.toString("utf-8");
+  }
+  return null;
 }
 
 function parseCursorChatData(json: string): RawSession[] {
