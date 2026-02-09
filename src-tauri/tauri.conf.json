@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Assistant Memory",
+  "productName": "AssistMem",
   "version": "0.1.0",
-  "identifier": "com.assistant.memory",
+  "identifier": "com.assistmem.app",
   "build": {
     "frontendDist": "../desktop/web",
     "devUrl": "http://127.0.0.1:3939",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Assistant Memory",
+        "title": "AssistMem",
         "width": 1280,
         "height": 840,
         "minWidth": 960,

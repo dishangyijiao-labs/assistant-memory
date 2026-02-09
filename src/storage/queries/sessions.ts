@@ -39,6 +39,7 @@ export interface SessionListItem {
   started_at: number;
   last_at: number;
   message_count: number;
+  preview: string;
 }
 
 export interface SessionFilterOptions {
@@ -63,8 +64,19 @@ export function listSessions(
   const whereQuery = hasQuery ? "AND (workspace LIKE ? OR external_id LIKE ?)" : "";
   if (opts.source) {
     const stmt = database.prepare(`
-      SELECT id, source, workspace, external_id, started_at, last_at, message_count
-      FROM sessions WHERE ${whereSource} ${whereQuery} ORDER BY last_at DESC LIMIT ? OFFSET ?
+      SELECT
+        s.id, s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count,
+        COALESCE(substr(m.content, 1, 100), s.workspace, s.external_id) AS preview
+      FROM sessions s
+      LEFT JOIN (
+        SELECT session_id, content, MIN(timestamp) as min_ts
+        FROM messages
+        WHERE role = 'user'
+        GROUP BY session_id
+      ) m ON m.session_id = s.id
+      WHERE ${whereSource} ${whereQuery}
+      ORDER BY s.last_at DESC
+      LIMIT ? OFFSET ?
     `);
     const params: Array<string | number> = [opts.source];
     if (hasQuery) {
@@ -75,8 +87,19 @@ export function listSessions(
     return stmt.all(...params) as SessionListItem[];
   }
   const stmt = database.prepare(`
-    SELECT id, source, workspace, external_id, started_at, last_at, message_count
-    FROM sessions WHERE ${whereSource} ${whereQuery} ORDER BY last_at DESC LIMIT ? OFFSET ?
+    SELECT
+      s.id, s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count,
+      COALESCE(substr(m.content, 1, 100), s.workspace, s.external_id) AS preview
+    FROM sessions s
+    LEFT JOIN (
+      SELECT session_id, content, MIN(timestamp) as min_ts
+      FROM messages
+      WHERE role = 'user'
+      GROUP BY session_id
+    ) m ON m.session_id = s.id
+    WHERE ${whereSource} ${whereQuery}
+    ORDER BY s.last_at DESC
+    LIMIT ? OFFSET ?
   `);
   const params: Array<string | number> = [];
   if (hasQuery) {
@@ -153,8 +176,19 @@ export function listSessionsAdvanced(opts: SessionFilterOptions = {}): SessionLi
   const offset = Math.max(0, opts.offset ?? 0);
   const { whereSql, params } = buildSessionFilters(opts);
   const stmt = database.prepare(`
-    SELECT id, source, workspace, external_id, started_at, last_at, message_count
-    FROM sessions WHERE ${whereSql} ORDER BY last_at DESC LIMIT ? OFFSET ?
+    SELECT
+      s.id, s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count,
+      COALESCE(substr(m.content, 1, 100), s.workspace, s.external_id) AS preview
+    FROM sessions s
+    LEFT JOIN (
+      SELECT session_id, content, MIN(timestamp) as min_ts
+      FROM messages
+      WHERE role = 'user'
+      GROUP BY session_id
+    ) m ON m.session_id = s.id
+    WHERE ${whereSql}
+    ORDER BY s.last_at DESC
+    LIMIT ? OFFSET ?
   `);
   return stmt.all(...params, limit, offset) as SessionListItem[];
 }
@@ -250,7 +284,19 @@ export function getSessionDetail(
 ): SessionDetail | null {
   const database = getDb();
   const session = database
-    .prepare("SELECT id, source, workspace, external_id, started_at, last_at, message_count FROM sessions WHERE id = ?")
+    .prepare(`
+      SELECT
+        s.id, s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count,
+        COALESCE(substr(m.content, 1, 100), s.workspace, s.external_id) AS preview
+      FROM sessions s
+      LEFT JOIN (
+        SELECT session_id, content, MIN(timestamp) as min_ts
+        FROM messages
+        WHERE role = 'user'
+        GROUP BY session_id
+      ) m ON m.session_id = s.id
+      WHERE s.id = ?
+    `)
     .get(sessionId) as SessionListItem | undefined;
   if (!session) return null;
   const orderSql = order === "asc" ? "ASC" : "DESC";
@@ -270,10 +316,18 @@ export function listSessionsByIds(sessionIds: number[]): SessionListItem[] {
   const placeholders = ids.map(() => "?").join(",");
   const rows = getDb()
     .prepare(`
-      SELECT id, source, workspace, external_id, started_at, last_at, message_count
-      FROM sessions
-      WHERE id IN (${placeholders})
-      ORDER BY last_at DESC
+      SELECT
+        s.id, s.source, s.workspace, s.external_id, s.started_at, s.last_at, s.message_count,
+        COALESCE(substr(m.content, 1, 100), s.workspace, s.external_id) AS preview
+      FROM sessions s
+      LEFT JOIN (
+        SELECT session_id, content, MIN(timestamp) as min_ts
+        FROM messages
+        WHERE role = 'user'
+        GROUP BY session_id
+      ) m ON m.session_id = s.id
+      WHERE s.id IN (${placeholders})
+      ORDER BY s.last_at DESC
     `)
     .all(...ids) as SessionListItem[];
   return rows;

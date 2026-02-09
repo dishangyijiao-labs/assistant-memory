@@ -7,7 +7,7 @@ export default function getInsightsReportsPage(): string {
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="sidebar-head">Assistant Memory</div>
+      <div class="sidebar-head">AssistMem</div>
       <div class="sidebar-filter">
         <select id="sb-source" class="source-select">
           <option value="">Source: All</option>
@@ -57,7 +57,7 @@ export default function getInsightsReportsPage(): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Assistant Memory - Insights Reports</title>
+  <title>AssistMem - Insights Reports</title>
 ${insightsReportsStyles}
 ${bodyHtml}
 ${insightsReportsScript}

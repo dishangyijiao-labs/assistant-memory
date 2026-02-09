@@ -1,4 +1,4 @@
--- Assistant Memory: Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI
+-- AssistMem: Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI
 -- Single SQLite DB + FTS5 for keyword search
 
 CREATE TABLE IF NOT EXISTS sessions (

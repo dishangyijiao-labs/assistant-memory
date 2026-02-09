@@ -23,7 +23,7 @@ export default function getSettingsPage(): string {
 
     <main class="main">
       <h1 class="page-title" id="section-title">Data Sources</h1>
-      <p class="page-sub" id="section-sub">Configure where Assistant Memory reads your AI conversation data.</p>
+      <p class="page-sub" id="section-sub">Configure where AssistMem reads your AI conversation data.</p>
       <div class="status" id="status"></div>
 
       <section class="section active" id="section-data-sources">
@@ -117,7 +117,7 @@ export default function getSettingsPage(): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Assistant Memory – Settings</title>
+  <title>AssistMem – Settings</title>
 ${settingsStyles}
 ${bodyHtml}
 ${settingsScript}

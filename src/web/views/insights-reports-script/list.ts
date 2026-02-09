@@ -75,6 +75,13 @@ export const insightsReportsScriptList = `
     }
 
     function sessionDisplayName(row) {
+      if (row.preview) {
+        var preview = safeText(row.preview.trim());
+        if (preview.length > 60) {
+          return preview.substring(0, 60) + "…";
+        }
+        return preview;
+      }
       var w = safeText(row.workspace || "");
       if (w) {
         var parts = w.replace(/\\\\/g, "/").split("/").filter(Boolean);

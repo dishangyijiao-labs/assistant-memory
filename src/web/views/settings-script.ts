@@ -3,7 +3,7 @@ export const settingsScript = `
     var sectionMeta = {
       "data-sources": {
         title: "Data Sources",
-        sub: "Configure where Assistant Memory reads your AI conversation data."
+        sub: "Configure where AssistMem reads your AI conversation data."
       },
       "index-sync": {
         title: "Index & Sync",
@@ -271,7 +271,7 @@ export const settingsScript = `
       var blob = new Blob([JSON.stringify(sourcePayload, null, 2)], { type: "application/json" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "assistant-memory-source-settings.json";
+      a.download = "assistmem-source-settings.json";
       a.click();
       URL.revokeObjectURL(a.href);
       setStatus("Source settings exported.", "ok");
@@ -364,14 +364,16 @@ export const settingsScript = `
 
     document.getElementById("display-compact").addEventListener("change", function () {
       try {
-        localStorage.setItem("assistant-memory.display.compact", this.checked ? "true" : "false");
+        localStorage.setItem("assistmem.display.compact", this.checked ? "true" : "false");
       } catch (_err) {}
       setStatus("Display preference saved locally.", "ok");
     });
 
     (function initDisplayPref() {
       try {
-        var compact = localStorage.getItem("assistant-memory.display.compact") === "true";
+        var compact =
+          localStorage.getItem("assistmem.display.compact") === "true" ||
+          localStorage.getItem("assistant-memory.display.compact") === "true";
         document.getElementById("display-compact").checked = compact;
       } catch (_err) {}
     })();

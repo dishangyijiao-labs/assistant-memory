@@ -66,6 +66,13 @@ export const searchPageScript = `
     }
 
     function getSessionTitle(session) {
+      if (session.preview) {
+        var preview = session.preview.trim();
+        if (preview.length > 60) {
+          return preview.substring(0, 60) + "…";
+        }
+        return preview;
+      }
       var ws = session.workspace || "";
       if (!ws) return "Session #" + session.id;
       var parts = ws.replace(/\\\\/g, "/").split("/").filter(Boolean);
@@ -135,7 +142,7 @@ export const searchPageScript = `
       selectedMessages = [];
       var html = '<div class="empty-state"><p>' + escapeHtml(text) + '</p>';
       if (showGuide) {
-        html += '<p class="guidance">Click <strong>Index Now</strong> to scan AI chat history, or run <code>npx assistant-memory index</code></p>';
+        html += '<p class="guidance">Click <strong>Index Now</strong> to scan AI chat history, or run <code>npx assistmem index</code></p>';
       }
       html += '</div>';
       document.getElementById("messages").innerHTML = html;

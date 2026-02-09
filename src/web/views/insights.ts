@@ -136,7 +136,7 @@ export default function getInsightsPage(): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Assistant Memory – Insights</title>
+  <title>AssistMem – Insights</title>
 ${insightsStyles}
 ${bodyHtml}
 ${insightsScript}

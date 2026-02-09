@@ -6,7 +6,7 @@ import { homedir, platform } from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-function getDefaultDbPath(): string {
+function getLegacyDbPath(): string {
   const home = homedir();
   if (platform() === "win32") {
     return join(home, "AppData", "Local", "assistant-memory", "assistant-memory.db");
@@ -14,8 +14,18 @@ function getDefaultDbPath(): string {
   return join(home, ".assistant-memory.db");
 }
 
+function getDefaultDbPath(): string {
+  const home = homedir();
+  const legacy = getLegacyDbPath();
+  if (existsSync(legacy)) return legacy;
+  if (platform() === "win32") {
+    return join(home, "AppData", "Local", "assistmem", "assistmem.db");
+  }
+  return join(home, ".assistmem.db");
+}
+
 export function getDbPath(): string {
-  return process.env.ASSISTANT_MEMORY_DB_PATH || getDefaultDbPath();
+  return process.env.ASSISTMEM_DB_PATH || process.env.ASSISTANT_MEMORY_DB_PATH || getDefaultDbPath();
 }
 
 let db: Database.Database | null = null;
@@ -24,7 +34,7 @@ export function getDb(): Database.Database {
   if (!db) {
     const path = getDbPath();
     const dir = dirname(path);
-    if (dir && !existsSync(dir) && path !== join(homedir(), ".assistant-memory.db")) {
+    if (dir && !existsSync(dir) && path !== join(homedir(), ".assistmem.db") && path !== getLegacyDbPath()) {
       mkdirSync(dir, { recursive: true });
     }
     db = new Database(path);

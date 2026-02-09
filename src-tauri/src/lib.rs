@@ -36,8 +36,9 @@ fn resolve_backend_entry(app: &tauri::AppHandle) -> PathBuf {
 }
 
 fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
-    let port =
-        std::env::var("ASSISTANT_MEMORY_DESKTOP_PORT").unwrap_or_else(|_| "3939".to_string());
+    let port = std::env::var("ASSISTMEM_DESKTOP_PORT")
+        .or_else(|_| std::env::var("ASSISTANT_MEMORY_DESKTOP_PORT"))
+        .unwrap_or_else(|_| "3939".to_string());
     let entry = resolve_backend_entry(app);
     let entry_str = entry
         .to_str()
@@ -49,12 +50,14 @@ fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
 
-    if let Ok(db_path) = std::env::var("ASSISTANT_MEMORY_DB_PATH") {
-        cmd.env("ASSISTANT_MEMORY_DB_PATH", db_path);
+    if let Ok(db_path) = std::env::var("ASSISTMEM_DB_PATH")
+        .or_else(|_| std::env::var("ASSISTANT_MEMORY_DB_PATH"))
+    {
+        cmd.env("ASSISTMEM_DB_PATH", db_path);
     }
 
     cmd.spawn()
-        .map_err(|e| format!("failed to start assistant-memory backend: {e}"))
+        .map_err(|e| format!("failed to start assistmem backend: {e}"))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

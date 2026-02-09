@@ -8,7 +8,7 @@ export default function getSearchPage(): string {
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>Assistant Memory</h1>
+        <h1>AssistMem</h1>
       </div>
       <div class="sidebar-filters">
         <form id="search-form" class="search-wrap" role="search">
@@ -36,7 +36,7 @@ export default function getSearchPage(): string {
       <div class="messages-area" id="messages">
         <div class="empty-state">
           <p>Select a session from the sidebar</p>
-          <p class="guidance">If no sessions appear, run <code>npx assistant-memory index</code></p>
+          <p class="guidance">If no sessions appear, run <code>npx assistmem index</code></p>
         </div>
       </div>
     </main>
@@ -49,7 +49,7 @@ export default function getSearchPage(): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Assistant Memory</title>
+  <title>AssistMem</title>
 ${searchPageStyles}
 ${bodyHtml}
 ${searchPageScript}

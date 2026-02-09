@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 import net from "node:net";
 
-const port = Number.parseInt(process.env.ASSISTANT_MEMORY_DESKTOP_PORT ?? "3939", 10) || 3939;
+const port =
+  Number.parseInt(process.env.ASSISTMEM_DESKTOP_PORT ?? process.env.ASSISTANT_MEMORY_DESKTOP_PORT ?? "3939", 10) ||
+  3939;
 const host = "127.0.0.1";
 const baseUrl = `http://${host}:${port}`;
 const healthUrl = `${baseUrl}/api/stats`;

@@ -150,7 +150,7 @@ export function resolveModelApiKey(settings: db.ModelSettings, apiKeyFromRequest
     if (!envName) return null;
     return process.env[envName] ?? null;
   }
-  if (!keyRef) return process.env.ASSISTANT_MEMORY_MODEL_API_KEY ?? null;
+  if (!keyRef) return process.env.ASSISTMEM_MODEL_API_KEY ?? process.env.ASSISTANT_MEMORY_MODEL_API_KEY ?? null;
   return null;
 }
 
@@ -196,4 +196,3 @@ export function parseJsonObject(value: string): Record<string, unknown> {
 export function parseJsonStringArray(value: string): string[] {
   return parseJsonArray(value).filter((item): item is string => typeof item === "string");
 }
-

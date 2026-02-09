@@ -4,7 +4,7 @@ export default function getSessionPage(): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Assistant Memory – Session</title>
+  <title>AssistMem – Session</title>
   <style>
     :root {
       --bg: #ffffff;

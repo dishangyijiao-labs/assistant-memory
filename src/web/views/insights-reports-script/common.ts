@@ -121,6 +121,13 @@ export const insightsReportsScriptCommon = `
     }
 
     function sidebarSessionTitle(s) {
+      if (s.preview) {
+        var preview = safeText(s.preview.trim());
+        if (preview.length > 60) {
+          return preview.substring(0, 60) + "…";
+        }
+        return preview;
+      }
       var w = safeText(s.workspace || "");
       if (w) {
         var normalized = w.replace(/\\\\/g, "/").split("/").filter(Boolean);

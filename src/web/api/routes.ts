@@ -688,7 +688,7 @@ export function createHandler() {
 export function startServer(port: number = DEFAULT_PORT): void {
   const server = createServer(createHandler());
   server.listen(port, () => {
-    console.error("Assistant Memory – web search");
+    console.error("AssistMem – web search");
     console.error("Open http://localhost:" + port + " in your browser.");
   });
 }
