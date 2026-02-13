@@ -2,6 +2,12 @@ import { Command } from "commander";
 import { runIngest } from "./ingest/index.js";
 import * as db from "./storage/db.js";
 import { startServer } from "./web/server.js";
+import {
+  DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE,
+  QUALITY_ANALYZER_OUTPUT_SCHEMA,
+  QUALITY_ANALYZER_SYSTEM_PROMPT,
+  QUALITY_METRIC_DEFINITIONS,
+} from "./insights/quality-kit.js";
 
 const program = new Command();
 
@@ -60,6 +66,56 @@ program
   .action((opts: { port?: string }) => {
     const port = parseInt(opts.port ?? "3000", 10) || 3000;
     startServer(port);
+  });
+
+program
+  .command("quality-kit")
+  .description("Print prompt-quality analyzer prompt, JSON schema, and daily report template.")
+  .option("-f, --format <type>", "Output format: markdown|json (default markdown)", "markdown")
+  .action((opts: { format?: string }) => {
+    const format = (opts.format ?? "markdown").trim().toLowerCase();
+    if (format === "json") {
+      console.log(
+        JSON.stringify(
+          {
+            analyzer: {
+              system_prompt: QUALITY_ANALYZER_SYSTEM_PROMPT,
+              output_schema: QUALITY_ANALYZER_OUTPUT_SCHEMA,
+            },
+            daily_report: {
+              markdown_template: DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE,
+              metrics: QUALITY_METRIC_DEFINITIONS,
+            },
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    console.log("# Prompt Quality Kit");
+    console.log("");
+    console.log("## Analyzer System Prompt");
+    console.log("```text");
+    console.log(QUALITY_ANALYZER_SYSTEM_PROMPT);
+    console.log("```");
+    console.log("");
+    console.log("## Analyzer JSON Output Schema");
+    console.log("```json");
+    console.log(JSON.stringify(QUALITY_ANALYZER_OUTPUT_SCHEMA, null, 2));
+    console.log("```");
+    console.log("");
+    console.log("## Daily Report Metrics");
+    for (const metric of QUALITY_METRIC_DEFINITIONS) {
+      console.log(`- ${metric.name} (\`${metric.key}\`)`);
+      console.log(`  formula: ${metric.formula}`);
+      console.log(`  interpretation: ${metric.interpretation}`);
+    }
+    console.log("");
+    console.log("## Daily Report Markdown Template");
+    console.log("```md");
+    console.log(DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE);
+    console.log("```");
   });
 
 export function run(): void {

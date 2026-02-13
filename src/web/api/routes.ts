@@ -27,6 +27,12 @@ import getSessionPage from "../views/session.js";
 import getInsightsPage from "../views/insights.js";
 import getSettingsPage from "../views/settings.js";
 import getInsightsReportsPage from "../views/insights-reports.js";
+import {
+  DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE,
+  QUALITY_ANALYZER_OUTPUT_SCHEMA,
+  QUALITY_ANALYZER_SYSTEM_PROMPT,
+  QUALITY_METRIC_DEFINITIONS,
+} from "../../insights/quality-kit.js";
 
 const DEFAULT_PORT = 3000;
 
@@ -358,6 +364,20 @@ export function createHandler() {
           const message = err instanceof Error ? err.message : "Failed to read database";
           sendError(res, 500, "DB_QUERY_FAILED", message);
         }
+        return;
+      }
+
+      if (path === "/api/insights/quality-kit" && method === "GET") {
+        sendJson(res, 200, {
+          analyzer: {
+            system_prompt: QUALITY_ANALYZER_SYSTEM_PROMPT,
+            output_schema: QUALITY_ANALYZER_OUTPUT_SCHEMA,
+          },
+          daily_report: {
+            markdown_template: DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE,
+            metrics: QUALITY_METRIC_DEFINITIONS,
+          },
+        });
         return;
       }
 

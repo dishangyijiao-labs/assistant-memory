@@ -1,39 +1,10 @@
 export const settingsScript = `
   <script>
-    var sectionMeta = {
-      "data-sources": {
-        title: "Data Sources",
-        sub: "Configure where AssistMem reads your AI conversation data."
-      },
-      "index-sync": {
-        title: "Index & Sync",
-        sub: "Control manual indexing and source sync operations."
-      },
-      "storage": {
-        title: "Storage",
-        sub: "Inspect the local database path and indexed volume."
-      },
-      "display": {
-        title: "Display",
-        sub: "Configure viewing preferences for the desktop client."
-      },
-      "privacy-security": {
-        title: "Privacy & Security",
-        sub: "Review external API status and privacy boundaries."
-      },
-      "export-backup": {
-        title: "Export & Backup",
-        sub: "Export reusable settings artifacts from this machine."
-      }
-    };
-
     var modeLabel = {
       local_files: "Local Files",
       file_import: "File Import",
       api: "API"
     };
-
-    var sourcePayload = null;
 
     function safeText(v) {
       return typeof v === "string" ? v : "";
@@ -86,21 +57,6 @@ export const settingsScript = `
           if (!res.ok) throw new Error(parseError(payload));
           return payload;
         });
-      });
-    }
-
-    function activateSection(sectionId) {
-      var title = document.getElementById("section-title");
-      var sub = document.getElementById("section-sub");
-      var meta = sectionMeta[sectionId] || sectionMeta["data-sources"];
-      title.textContent = meta.title;
-      sub.textContent = meta.sub;
-
-      document.querySelectorAll("#settings-nav button").forEach(function (btn) {
-        btn.classList.toggle("active", btn.getAttribute("data-section") === sectionId);
-      });
-      document.querySelectorAll(".section").forEach(function (sec) {
-        sec.classList.toggle("active", sec.id === "section-" + sectionId);
       });
     }
 
@@ -204,7 +160,6 @@ export const settingsScript = `
       setStatus("Loading source settings...", "warn");
       return api("/api/settings/sources")
         .then(function (payload) {
-          sourcePayload = payload;
           renderSummary(payload);
           renderSources(payload);
           var summary = payload.summary || {};
@@ -262,26 +217,6 @@ export const settingsScript = `
           btn.disabled = false;
         });
     }
-
-    function exportSourceSettings() {
-      if (!sourcePayload) {
-        setStatus("No source settings loaded yet.", "warn");
-        return;
-      }
-      var blob = new Blob([JSON.stringify(sourcePayload, null, 2)], { type: "application/json" });
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "assistmem-source-settings.json";
-      a.click();
-      URL.revokeObjectURL(a.href);
-      setStatus("Source settings exported.", "ok");
-    }
-
-    document.getElementById("settings-nav").addEventListener("click", function (e) {
-      var btn = e.target.closest("button[data-section]");
-      if (!btn) return;
-      activateSection(btn.getAttribute("data-section") || "data-sources");
-    });
 
     document.getElementById("source-list").addEventListener("change", function (e) {
       var toggle = e.target.closest(".source-toggle");
@@ -348,35 +283,9 @@ export const settingsScript = `
       }
     });
 
-    document.getElementById("btn-refresh-sources").addEventListener("click", function () {
-      void loadSourceSettings();
-    });
-    document.getElementById("btn-add-source").addEventListener("click", function () {
-      setStatus("Add source flow is reserved for a later beta iteration.", "warn");
-    });
     document.getElementById("btn-sync-enabled").addEventListener("click", function () {
       void syncEnabledSources();
     });
-    document.getElementById("btn-storage-refresh").addEventListener("click", function () {
-      void refreshStorageStats();
-    });
-    document.getElementById("btn-export-settings").addEventListener("click", exportSourceSettings);
-
-    document.getElementById("display-compact").addEventListener("change", function () {
-      try {
-        localStorage.setItem("assistmem.display.compact", this.checked ? "true" : "false");
-      } catch (_err) {}
-      setStatus("Display preference saved locally.", "ok");
-    });
-
-    (function initDisplayPref() {
-      try {
-        var compact =
-          localStorage.getItem("assistmem.display.compact") === "true" ||
-          localStorage.getItem("assistant-memory.display.compact") === "true";
-        document.getElementById("display-compact").checked = compact;
-      } catch (_err) {}
-    })();
 
     Promise.all([loadSourceSettings(), loadModelStatus(), refreshStorageStats()]).catch(function () {});
   </script>

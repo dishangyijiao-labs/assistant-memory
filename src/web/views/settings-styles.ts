@@ -28,53 +28,12 @@ export const settingsStyles = `
       margin: 0 auto;
       min-height: 100vh;
       padding: 1.4rem;
-      display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
-      gap: 1rem;
     }
-    @media (max-width: 960px) {
-      .layout { grid-template-columns: 1fr; }
-    }
-    .sidebar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.9rem;
-      height: fit-content;
-    }
-    .sidebar-head {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.7rem;
-      padding-bottom: 0.7rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .sidebar-title { font-size: 0.98rem; font-weight: 700; }
-    .back-link { font-size: 0.86rem; color: var(--accent); }
-    .menu {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      margin-top: 0.35rem;
-    }
-    .menu button {
-      text-align: left;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--muted);
-      border-radius: 8px;
-      padding: 0.52rem 0.62rem;
-      font: inherit;
+    .back-link {
+      display: inline-block;
       font-size: 0.86rem;
-      cursor: pointer;
-    }
-    .menu button:hover { border-color: var(--border); color: var(--text); }
-    .menu button.active {
-      background: var(--accent-soft);
-      border-color: #d6e2ff;
       color: var(--accent);
-      font-weight: 600;
+      margin-bottom: 0.6rem;
     }
     .main {
       background: var(--surface);

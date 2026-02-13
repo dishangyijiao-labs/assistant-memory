@@ -51,6 +51,10 @@ npx assistmem stats
 # Web search (browser UI at http://localhost:3000)
 npx assistmem serve
 npx assistmem serve --port 4000
+
+# Print prompt-quality kit (scorer+rewriter prompt and daily report template)
+npx assistmem quality-kit
+npx assistmem quality-kit --format json
 ```
 
 ## Database
