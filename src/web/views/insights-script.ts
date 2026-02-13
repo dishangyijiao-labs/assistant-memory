@@ -47,7 +47,7 @@ export const insightsScript = `
     function updateExternalFieldsVisibility() {
       var mode = document.getElementById("model-mode").value;
       var fields = document.getElementById("external-fields");
-      if (mode === "external") {
+      if (mode === "external" || mode === "agent") {
         fields.classList.remove("hidden-fields");
       } else {
         fields.classList.add("hidden-fields");

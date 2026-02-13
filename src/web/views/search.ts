@@ -30,6 +30,7 @@ export default function getSearchPage(): string {
       <div class="content-header" id="content-header">
         <h2 id="session-title">Select a session</h2>
         <div class="header-actions">
+          <a href="#" class="action-btn" id="analyze-session" title="Analyze prompt quality" style="display:none">Analyze</a>
           <button type="button" class="action-btn" id="copy-session" disabled title="Copy session">Copy</button>
         </div>
       </div>

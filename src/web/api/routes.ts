@@ -33,6 +33,7 @@ import {
   QUALITY_ANALYZER_SYSTEM_PROMPT,
   QUALITY_METRIC_DEFINITIONS,
 } from "../../insights/quality-kit.js";
+import { analyzeSession } from "../../insights/quality-analyzer.js";
 
 const DEFAULT_PORT = 3000;
 
@@ -114,16 +115,16 @@ export function createHandler() {
           const timeTo = typeof scopeRaw.time_to === "number" ? Math.trunc(scopeRaw.time_to) : undefined;
           const settings = db.getModelSettings();
           const mode =
-            modelRaw.mode === "external" || modelRaw.mode === "local"
+            modelRaw.mode === "agent" || modelRaw.mode === "external" || modelRaw.mode === "local"
               ? modelRaw.mode
               : settings.mode_default;
-          const externalRequestedInPayload = modelRaw.mode === "external" || modelRaw.external_enabled === true;
-          if (mode === "external" && !settings.external_enabled && !externalRequestedInPayload) {
+          const externalRequestedInPayload = modelRaw.mode === "external" || modelRaw.mode === "agent" || modelRaw.external_enabled === true;
+          if ((mode === "external" || mode === "agent") && !settings.external_enabled && !externalRequestedInPayload) {
             sendError(res, 400, "INSIGHTS_MODEL_NOT_CONFIGURED", "External model is disabled");
             return;
           }
           const modelConfig: InsightModelConfig = { mode };
-          if (mode === "external") {
+          if (mode === "external" || mode === "agent") {
             const apiKey = resolveModelApiKey(settings, typeof modelRaw.api_key === "string" ? modelRaw.api_key : undefined);
             if (!apiKey) {
               sendError(res, 400, "INSIGHTS_MODEL_NOT_CONFIGURED", "External model API key is missing");
@@ -219,7 +220,7 @@ export function createHandler() {
         try {
           const body = await readJsonBody(req);
           const patch: Partial<db.ModelSettings> = {};
-          if (body.mode_default === "local" || body.mode_default === "external") {
+          if (body.mode_default === "local" || body.mode_default === "external" || body.mode_default === "agent") {
             patch.mode_default = body.mode_default;
           }
           if (typeof body.external_enabled === "boolean") {
@@ -398,6 +399,52 @@ export function createHandler() {
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to delete insight report";
           sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/quality/analyze" && method === "POST") {
+        try {
+          const body = await readJsonBody(req);
+          const sessionId = typeof body.session_id === "number" ? Math.trunc(body.session_id) : null;
+          if (!sessionId || sessionId < 1) {
+            sendError(res, 400, "INVALID_ARGUMENT", "session_id is required and must be positive");
+            return;
+          }
+          const session = db.getSessionDetail(sessionId, 1, 0, "asc");
+          if (!session) {
+            sendError(res, 404, "NOT_FOUND", "Session not found");
+            return;
+          }
+          const settings = db.getModelSettings();
+          if (!settings.external_enabled) {
+            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "External model must be enabled in Settings");
+            return;
+          }
+          const apiKey = resolveModelApiKey(settings);
+          if (!apiKey) {
+            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "API key is missing. Configure in Settings.");
+            return;
+          }
+          const baseUrl = (settings.base_url || "https://api.openai.com/v1").replace(/\/+$/, "");
+          const modelName = settings.model_name || "gpt-4o-mini";
+          if (!modelName) {
+            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "model_name is required in Settings");
+            return;
+          }
+          const result = await analyzeSession(sessionId, {
+            baseUrl,
+            modelName,
+            apiKey,
+          });
+          sendJson(res, 200, {
+            session_id: sessionId,
+            analyzed: result.analyzed,
+            failed: result.failed,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Quality analysis failed";
+          sendError(res, 500, "QUALITY_ANALYSIS_FAILED", message);
         }
         return;
       }
@@ -686,9 +733,64 @@ export function createHandler() {
             sendError(res, 404, "NOT_FOUND", "Session not found");
             return;
           }
-          sendJson(res, 200, data);
+          const userMessageIds = data.messages.filter((m) => m.role === "user").map((m) => m.id);
+          const qualityMap = db.getQualityScoresByMessageIds(userMessageIds);
+          const quality_scores: Record<number, Record<string, unknown>> = {};
+          for (const [msgId, row] of qualityMap) {
+            quality_scores[msgId] = {
+              score: row.score,
+              grade: row.grade,
+              deductions: parseJsonArray(row.deductions_json),
+              missing_info_checklist: parseJsonArray(row.missing_info_checklist_json),
+              rewrites: parseJsonObject(row.rewrites_json),
+              tags: parseJsonArray(row.tags_json),
+            };
+          }
+          sendJson(res, 200, { ...data, quality_scores });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to load session";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/quality/kpi") {
+        try {
+          const params = getQueryParams(url);
+          const sessionIdsParam = params.get("session_ids");
+          const sessionIds = sessionIdsParam
+            ? sessionIdsParam.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0)
+            : undefined;
+          if (!sessionIds || sessionIds.length === 0) {
+            sendError(res, 400, "INVALID_ARGUMENT", "session_ids query param required (comma-separated)");
+            return;
+          }
+          const kpi = db.getQualityKpiForScope({ sessionIds });
+          sendJson(res, 200, kpi);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to compute KPI";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/eval/stats") {
+        try {
+          const params = getQueryParams(url);
+          const sessionIdsParam = params.get("session_ids");
+          const sessionIds = sessionIdsParam
+            ? sessionIdsParam.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0)
+            : undefined;
+          const timeFrom = parseOptInt(params.get("time_from"));
+          const timeTo = parseOptInt(params.get("time_to"));
+          const stats = db.getEvalStats({
+            sessionIds: sessionIds && sessionIds.length > 0 ? sessionIds : undefined,
+            timeFrom: timeFrom ?? undefined,
+            timeTo: timeTo ?? undefined,
+          });
+          sendJson(res, 200, stats);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to compute eval stats";
           sendError(res, 500, "DB_QUERY_FAILED", message);
         }
         return;

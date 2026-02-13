@@ -124,6 +124,7 @@ export const searchPageStyles = `
     }
     .action-btn:hover { border-color: var(--accent); color: var(--text); }
     .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    a.action-btn { text-decoration: none; }
 
     /* Messages area */
     .messages-area {
@@ -149,6 +150,15 @@ export const searchPageStyles = `
       padding: 0.7rem 1rem; border-radius: 14px;
       font-size: 0.88rem; line-height: 1.6; word-break: break-word;
     }
+    .bubble-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+    .bubble-wrap .quality-badge {
+      font-size: 0.68rem; padding: 0.12rem 0.35rem; border-radius: 4px;
+      font-weight: 600; text-decoration: none;
+    }
+    .bubble-wrap .quality-badge.quality-a, .bubble-wrap .quality-badge.quality-b { background: #d1fae5; color: #065f46; }
+    .bubble-wrap .quality-badge.quality-c { background: #fef3c7; color: #92400e; }
+    .bubble-wrap .quality-badge.quality-d, .bubble-wrap .quality-badge.quality-f { background: #fee2e2; color: #991b1b; }
+    .bubble-wrap .quality-badge:hover { opacity: 0.85; }
     .bubble-user {
       background: var(--user-bubble); color: var(--text);
       border: 1px solid var(--border); border-bottom-right-radius: 4px;

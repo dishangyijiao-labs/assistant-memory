@@ -1,4 +1,5 @@
 import type { InsightMessage } from "../../storage/db.js";
+import { retrieveSimilarUserQuestions } from "../../storage/queries/rag.js";
 import type { InsightGenerationResult, InsightModelConfig, LocalAnalysis } from "../types/index.js";
 
 function extractJsonBlock(text: string): string {
@@ -23,13 +24,31 @@ export async function externalRewrite(
     .slice(-120)
     .map((message) => `[${message.role}] ${message.content.slice(0, 220)}`)
     .join("\n");
+
+  let ragContext = "";
+  const userQuestions = messages.filter((m) => m.role === "user").map((m) => m.content.trim()).filter((c) => c.length > 10);
+  if (userQuestions.length > 0) {
+    const query = userQuestions.slice(0, 3).join(" ");
+    const similar = retrieveSimilarUserQuestions({
+      query,
+      limit: 5,
+      minScore: 80,
+    });
+    if (similar.length > 0) {
+      ragContext = "\n\nHigh-quality prompt examples from this user's history (use as reference for actionable feedback):\n" +
+        similar.map((s, i) => `[${i + 1}] (score ${s.score ?? "?"}) ${s.content.slice(0, 200)}...`).join("\n") +
+        "\n";
+    }
+  }
+
   const prompt = [
-    "You are generating development insights.",
+    "You are generating development insights. Goal: help the user ask BETTER questions next time.",
     "Return strict JSON with keys: summary (string), patterns (string[]), feedback (string[]).",
-    "Keep feedback actionable and concise.",
+    "Feedback MUST be actionable: 'Next time when X, ask like: [concrete prompt example]' — NOT generic advice.",
     `Local summary: ${local.summary}`,
     `Local patterns: ${local.patterns.join(" | ")}`,
     `Local feedback: ${local.feedback.join(" | ")}`,
+    ragContext,
     `Chat sample:\n${compactSample}`,
   ].join("\n");
 

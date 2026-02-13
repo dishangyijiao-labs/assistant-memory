@@ -44,6 +44,7 @@ export default function getInsightsPage(): string {
             <select id="model-mode">
               <option value="local">Local (rule-based)</option>
               <option value="external">External API</option>
+              <option value="agent">Agent (tool calling)</option>
             </select>
           </div>
           <div style="display:flex;align-items:flex-end;">

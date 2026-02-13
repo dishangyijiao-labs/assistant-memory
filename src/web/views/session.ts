@@ -93,6 +93,21 @@ export default function getSessionPage(): string {
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton-msg { height: 48px; margin-bottom: 0.5rem; border-radius: 8px; max-width: 70%; }
     .skeleton-msg:nth-child(odd) { align-self: flex-end; max-width: 60%; }
+    .quality-badge { font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; }
+    .quality-badge.grade-a, .quality-badge.grade-b { background: #d1fae5; color: #065f46; }
+    .quality-badge.grade-c { background: #fef3c7; color: #92400e; }
+    .quality-badge.grade-d, .quality-badge.grade-f { background: #fee2e2; color: #991b1b; }
+    .quality-panel { margin-top: 0.5rem; padding: 0.6rem; background: rgba(0,0,0,0.03); border-radius: 6px; font-size: 0.78rem; }
+    .quality-panel .deductions { color: var(--muted); margin-bottom: 0.4rem; }
+    .quality-panel .rewrites { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+    .rewrite-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.25rem 0.5rem; max-width: 100%; }
+    .rewrite-chip .label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; flex-shrink: 0; }
+    .rewrite-chip .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+    .rewrite-chip button { flex-shrink: 0; background: var(--accent-soft); color: var(--accent); border: none; border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.7rem; cursor: pointer; }
+    .rewrite-chip button:hover { background: var(--accent); color: #fff; }
+    .btn-analyze { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.8rem; cursor: pointer; }
+    .btn-analyze:hover { background: var(--accent-hover); }
+    .btn-analyze:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -103,6 +118,7 @@ export default function getSessionPage(): string {
         <div class="title" id="title">Session</div>
         <div class="meta" id="meta"></div>
       </div>
+      <button class="btn-analyze" id="btnAnalyze" style="display:none">Analyze quality</button>
     </div>
     <div id="messages">
       <div class="skeleton skeleton-msg" style="width:60%"></div>
@@ -164,6 +180,38 @@ export default function getSessionPage(): string {
       catch (e) { return new URLSearchParams(); }
     }
 
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function() { btn.textContent = orig; }, 800);
+      });
+    }
+
+    function buildQualityHtml(q) {
+      if (!q) return "";
+      var gradeClass = "grade-" + (q.grade ? q.grade.toLowerCase() : "c").charAt(0);
+      var badge = '<div class="quality-badge ' + gradeClass + '">' + escapeHtml(String(q.score)) + " " + escapeHtml(q.grade || "?") + "</div>";
+      var deductions = Array.isArray(q.deductions) && q.deductions.length ? q.deductions.map(function(d) { return (d.reason || d.code || "").trim(); }).filter(Boolean).slice(0, 3) : [];
+      var rewrites = q.rewrites && typeof q.rewrites === "object" ? q.rewrites : {};
+      var shortR = rewrites.short || "";
+      var engR = rewrites.engineering || "";
+      var expR = rewrites.exploratory || "";
+      var hasRewrites = shortR || engR || expR;
+      if (!deductions.length && !hasRewrites) return badge;
+      var panel = '<div class="quality-panel">';
+      if (deductions.length) panel += '<div class="deductions">' + escapeHtml(deductions.join(" · ")) + "</div>";
+      if (hasRewrites) {
+        panel += '<div class="rewrites">';
+        if (shortR) panel += '<div class="rewrite-chip"><span class="label">Short</span><span class="text">' + escapeHtml(shortR.slice(0, 50) + (shortR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(shortR) + '</span><button type="button">Copy</button></div>';
+        if (engR) panel += '<div class="rewrite-chip"><span class="label">Engineering</span><span class="text">' + escapeHtml(engR.slice(0, 50) + (engR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(engR) + '</span><button type="button">Copy</button></div>';
+        if (expR) panel += '<div class="rewrite-chip"><span class="label">Exploratory</span><span class="text">' + escapeHtml(expR.slice(0, 50) + (expR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(expR) + '</span><button type="button">Copy</button></div>';
+        panel += "</div>";
+      }
+      panel += "</div>";
+      return badge + panel;
+    }
+
     function renderSession(data, highlightMessageId) {
       if (!data || !data.session) {
         document.getElementById("messages").innerHTML = '<div class="empty-state">Session not found.</div>';
@@ -174,25 +222,57 @@ export default function getSessionPage(): string {
       document.getElementById("title").textContent = label + " — " + (s.workspace || "(default)");
       document.getElementById("meta").textContent = "Session " + s.id + " · " + formatTime(s.last_at) + " · " + (s.message_count || 0) + " messages";
 
+      var userCount = (data.messages || []).filter(function(m) { return (m.role || "").toLowerCase() === "user"; }).length;
+      var btn = document.getElementById("btnAnalyze");
+      if (userCount > 0) { btn.style.display = "inline-block"; btn.onclick = function() { runAnalyze(s.id, btn); }; }
+
+      var qualityScores = data.quality_scores || {};
       var html = (data.messages || []).map(function (m) {
         var ts = formatTime(m.timestamp);
         var role = (m.role || "assistant").toLowerCase();
         var roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
         var highlight = highlightMessageId && String(m.id) === String(highlightMessageId) ? " highlight" : "";
         var content = renderMarkdown(m.content || "(empty)");
+        var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id]) : "";
         return '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
           '<div class="message-meta"><span class="role">' + escapeHtml(m.role || "assistant") + '</span><span>' + escapeHtml(ts) + '</span></div>' +
           '<div class="message-content">' + content + '</div>' +
+          (qualityHtml ? '<div class="quality-feedback">' + qualityHtml + "</div>" : "") +
         '</div>';
       }).join("");
       document.getElementById("messages").innerHTML = html || '<div class="empty-state">No messages found.</div>';
 
+      document.querySelectorAll(".rewrite-chip").forEach(function(chip) {
+        var src = chip.querySelector(".copy-src");
+        var btn = chip.querySelector("button");
+        if (src && btn) btn.addEventListener("click", function() { copyToClipboard(src.textContent || "", btn); });
+      });
+
       if (highlightMessageId) {
         var target = document.querySelector('.message[data-message-id="' + highlightMessageId + '"]');
-        if (target && target.scrollIntoView) {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+    }
+
+    function runAnalyze(sessionId, btn) {
+      btn.disabled = true;
+      btn.textContent = "Analyzing…";
+      fetch("/api/quality/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+          if (result.error) throw new Error(result.error.message || "Analysis failed");
+          btn.textContent = "Analyzed " + (result.analyzed || 0);
+          setTimeout(function() { location.reload(); }, 600);
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.textContent = "Analyze quality";
+          alert(err.message || "Analysis failed. Ensure Settings → Model is configured.");
+        });
     }
 
     var params = getQueryParams();

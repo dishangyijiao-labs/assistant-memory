@@ -18,6 +18,7 @@
     "start": "node dist/index.js",
     "index": "node dist/index.js index",
     "search": "node dist/index.js search",
+    "quality-report": "node dist/index.js quality-report",
     "serve": "node dist/index.js serve",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
@@ -27,7 +28,9 @@
     "desktop:prepare": "mkdir -p src-tauri/resources && rm -rf src-tauri/resources/dist && cp -R dist src-tauri/resources/dist",
     "desktop:dev": "npx @tauri-apps/cli@latest dev",
     "desktop:build": "npx @tauri-apps/cli@latest build",
-    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml"
+    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "mac": "npm run build && npm run desktop:prepare && npm run desktop:dev",
+    "mac:build": "npm run build && npm run desktop:prepare && npm run desktop:build"
   },
   "keywords": [
     "cursor",

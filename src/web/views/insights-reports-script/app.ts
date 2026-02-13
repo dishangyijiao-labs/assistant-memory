@@ -26,7 +26,7 @@ export const insightsReportsScriptApp = `
       document.body.addEventListener("change", function(e) {
         if (!e || !e.target) return;
         if (e.target.id === "model-mode") {
-          modelState.settings.mode_default = e.target.value === "external" ? "external" : "local";
+          modelState.settings.mode_default = e.target.value === "agent" ? "agent" : e.target.value === "external" ? "external" : "local";
           renderModelConfigPanel();
           syncSelectHeader();
         }

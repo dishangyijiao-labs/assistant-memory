@@ -52,10 +52,29 @@ npx assistmem stats
 npx assistmem serve
 npx assistmem serve --port 4000
 
+# Mac desktop app (Tauri) — see [DESKTOP.md](DESKTOP.md)
+npm run mac          # development
+npm run mac:build    # production .app
+
 # Print prompt-quality kit (scorer+rewriter prompt and daily report template)
 npx assistmem quality-kit
 npx assistmem quality-kit --format json
+
+# Generate daily quality report (KPI + top low-quality questions)
+npm run build   # required before first use
+npx assistmem quality-report
+npx assistmem quality-report --days 7 --limit 10 -o report.md
 ```
+
+## Prompt quality analysis (Web)
+
+1. Run `npx assistmem serve` and open http://localhost:3000
+2. Go to **Settings** → enable **External model**, configure API key and model
+3. Select a session → click **Analyze** to open session detail
+4. Click **Analyze quality** to score each user question and get rewrites
+5. Use **Copy** on rewrite chips (Short / Engineering / Exploratory) to improve prompts
+
+Quality analysis uses **RAG**: similar high-quality questions from your history are retrieved via FTS5 and injected as few-shot examples into the LLM context for more targeted feedback. See [docs/GOOD_QUESTION_STANDARDS.md](docs/GOOD_QUESTION_STANDARDS.md).
 
 ## Database
 

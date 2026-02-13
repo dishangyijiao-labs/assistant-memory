@@ -116,3 +116,40 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_workspace_last_at ON sessions(workspace, last_at DESC);
+
+CREATE TABLE IF NOT EXISTS message_quality_scores (
+  id INTEGER PRIMARY KEY,
+  message_id INTEGER NOT NULL,
+  session_id INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  grade TEXT NOT NULL,
+  deductions_json TEXT NOT NULL DEFAULT '[]',
+  missing_info_checklist_json TEXT NOT NULL DEFAULT '[]',
+  rewrites_json TEXT NOT NULL DEFAULT '{}',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL,
+  UNIQUE(message_id),
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_quality_scores_session ON message_quality_scores(session_id);
+CREATE INDEX IF NOT EXISTS idx_message_quality_scores_created ON message_quality_scores(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS eval_question_pairs (
+  id INTEGER PRIMARY KEY,
+  session_id INTEGER NOT NULL,
+  prior_message_id INTEGER NOT NULL,
+  next_message_id INTEGER NOT NULL,
+  prior_score INTEGER NOT NULL,
+  next_score INTEGER NOT NULL,
+  delta INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(prior_message_id, next_message_id),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (prior_message_id) REFERENCES messages(id) ON DELETE CASCADE,
+  FOREIGN KEY (next_message_id) REFERENCES messages(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_eval_question_pairs_session ON eval_question_pairs(session_id);
+CREATE INDEX IF NOT EXISTS idx_eval_question_pairs_created ON eval_question_pairs(created_at DESC);

@@ -149,8 +149,9 @@ export const searchPageScript = `
       document.getElementById("copy-session").disabled = true;
     }
 
-    function renderMessages(messages) {
+    function renderMessages(messages, qualityScores) {
       selectedMessages = messages || [];
+      qualityScores = qualityScores || {};
       if (!messages || messages.length === 0) {
         setMessagePanelEmpty("No messages found in this session.", false);
         return;
@@ -162,9 +163,11 @@ export const searchPageScript = `
         var content = renderMarkdown(m.content || "(empty)");
         if (currentQuery) content = highlightSearchTerms(content, currentQuery);
         var avatarHtml = role === "assistant" ? '<div class="avatar">' + avatarSvg + '</div>' : '';
+        var q = role === "user" ? qualityScores[m.id] : null;
+        var badgeHtml = q ? '<a href="/session?session_id=' + escapeHtml(String(selectedSession.id)) + '&message_id=' + escapeHtml(String(m.id)) + '" class="quality-badge quality-' + (q.grade || "c").toLowerCase().charAt(0) + '" title="Prompt quality">' + escapeHtml(String(q.score || "?")) + ' ' + escapeHtml(q.grade || "?") + '</a>' : '';
         return '<div class="chat-msg ' + msgClass + '">' +
           avatarHtml +
-          '<div class="bubble ' + bubbleClass + '">' + content + '</div>' +
+          '<div class="bubble-wrap"><div class="bubble ' + bubbleClass + '">' + content + '</div>' + badgeHtml + '</div>' +
         '</div>';
       }).join("");
       document.getElementById("messages").innerHTML = html;
@@ -196,11 +199,17 @@ export const searchPageScript = `
 
     function setSessionHeader(session) {
       var titleEl = document.getElementById("session-title");
+      var analyzeEl = document.getElementById("analyze-session");
       if (!session) {
         titleEl.textContent = "Select a session";
+        if (analyzeEl) { analyzeEl.style.display = "none"; }
         return;
       }
       titleEl.textContent = getSessionTitle(session);
+      if (analyzeEl) {
+        analyzeEl.href = "/session?session_id=" + encodeURIComponent(String(session.id));
+        analyzeEl.style.display = "";
+      }
     }
 
     function loadSessionDetail(sessionId) {
@@ -220,7 +229,7 @@ export const searchPageScript = `
           }
           selectedSession = data.session || selectedSession;
           setSessionHeader(selectedSession);
-          renderMessages(data.messages || []);
+          renderMessages(data.messages || [], data.quality_scores || {});
         })
         .catch(function () {
           setMessagePanelEmpty("Failed to load session messages.", false);

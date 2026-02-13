@@ -4,3 +4,6 @@ export * from "./queries/messages.js";
 export * from "./queries/sessions.js";
 export * from "./queries/insights.js";
 export * from "./queries/settings.js";
+export * from "./queries/quality.js";
+export * from "./queries/rag.js";
+export * from "./queries/eval.js";

@@ -73,6 +73,25 @@ export function getDb(): Database.Database {
     `);
     db.exec("CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_report_id ON insight_report_sessions(report_id)");
     db.exec("CREATE INDEX IF NOT EXISTS idx_insight_report_sessions_session_id ON insight_report_sessions(session_id)");
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS eval_question_pairs (
+        id INTEGER PRIMARY KEY,
+        session_id INTEGER NOT NULL,
+        prior_message_id INTEGER NOT NULL,
+        next_message_id INTEGER NOT NULL,
+        prior_score INTEGER NOT NULL,
+        next_score INTEGER NOT NULL,
+        delta INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE(prior_message_id, next_message_id),
+        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY (prior_message_id) REFERENCES messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (next_message_id) REFERENCES messages(id) ON DELETE CASCADE
+      )
+    `);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_eval_question_pairs_session ON eval_question_pairs(session_id)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_eval_question_pairs_created ON eval_question_pairs(created_at DESC)");
   }
   return db;
 }

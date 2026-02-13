@@ -1,3 +1,4 @@
+import { writeFileSync } from "fs";
 import { Command } from "commander";
 import { runIngest } from "./ingest/index.js";
 import * as db from "./storage/db.js";
@@ -116,6 +117,103 @@ program
     console.log("```md");
     console.log(DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE);
     console.log("```");
+  });
+
+program
+  .command("quality-report")
+  .description("Generate daily prompt quality report (KPI + top low-quality questions).")
+  .option("-d, --days <number>", "Days to include (default 1)", "1")
+  .option("-n, --limit <number>", "Top N low-quality questions (default 10)", "10")
+  .option("-o, --output <path>", "Write to file (default: stdout)")
+  .action((opts: { days?: string; limit?: string; output?: string }) => {
+    const days = Math.min(30, Math.max(1, parseInt(opts.days ?? "1", 10)));
+    const limit = Math.min(50, Math.max(1, parseInt(opts.limit ?? "10", 10)));
+    const now = Date.now();
+    const timeTo = now;
+    const timeFrom = now - days * 24 * 60 * 60 * 1000;
+    const sessionRows = db
+      .getDb()
+      .prepare(
+        "SELECT id FROM sessions WHERE last_at >= ? AND last_at <= ? ORDER BY last_at DESC"
+      )
+      .all(timeFrom, timeTo) as Array<{ id: number }>;
+    const sessionIds = sessionRows.map((r) => r.id);
+    const kpi = db.getQualityKpiForScope({ sessionIds, timeFrom, timeTo });
+    const lowQuality = db.getTopLowQualityQuestions({
+      sessionIds: sessionIds.length > 0 ? sessionIds : undefined,
+      timeFrom,
+      timeTo,
+      limit,
+      maxScore: 80,
+    });
+    const dateStr = new Date().toISOString().slice(0, 10);
+    let md = DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE.replace(/\{\{date\}\}/g, dateStr)
+      .replace(/\{\{kpi\.avg_follow_up_rounds\}\}/g, String(kpi.avg_follow_up_rounds))
+      .replace(/\{\{kpi\.first_pass_resolution_rate\}\}/g, String(kpi.first_pass_resolution_rate))
+      .replace(/\{\{kpi\.repeated_question_ratio\}\}/g, String(kpi.repeated_question_ratio))
+      .replace(/\{\{kpi\.high_quality_ratio\}\}/g, String(kpi.high_quality_ratio));
+    const blockMatch = md.match(/\{\{#top_low_quality_questions\}\}([\s\S]*?)\{\{\/top_low_quality_questions\}\}/);
+    if (blockMatch) {
+      const template = blockMatch[1];
+      const items = lowQuality
+        .map(
+          (q, i) =>
+            template
+              .replace(/\{\{rank\}\}/g, String(i + 1))
+              .replace(/\{\{title\}\}/g, q.title.replace(/\|/g, "\\|"))
+              .replace(/\{\{session_id\}\}/g, String(q.session_id))
+              .replace(/\{\{workspace\}\}/g, q.workspace)
+              .replace(/\{\{source\}\}/g, q.source)
+              .replace(/\{\{score\}\}/g, String(q.score))
+              .replace(/\{\{deduction_reasons\}\}/g, q.deduction_reasons)
+              .replace(/\{\{required_checklist_md\}\}/g, q.required_checklist_md)
+              .replace(/\{\{rewrite_short\}\}/g, q.rewrite_short)
+              .replace(/\{\{rewrite_engineering\}\}/g, q.rewrite_engineering)
+              .replace(/\{\{rewrite_exploratory\}\}/g, q.rewrite_exploratory)
+        )
+        .join("\n\n");
+      md = md.replace(/\{\{#top_low_quality_questions\}\}[\s\S]*?\{\{\/top_low_quality_questions\}\}/, items || "(no low-quality questions)");
+    }
+    md = md
+      .replace(/\{\{#patterns\}\}[\s\S]*?\{\{\/patterns\}\}/g, "(patterns not yet implemented)")
+      .replace(/\{\{feedback\.[^}]+\}\}/g, "—")
+      .replace(/\{\{tomorrow\.[^}]+\}\}/g, "—");
+    if (opts.output) {
+      writeFileSync(opts.output, md, "utf-8");
+      console.error("Report written to", opts.output);
+    } else {
+      console.log(md);
+    }
+  });
+
+program
+  .command("eval-report")
+  .description("Show eval stats: improvement rate when user's next question scores higher.")
+  .option("-d, --days <number>", "Days to include (default 30)", "30")
+  .action((opts: { days?: string }) => {
+    const days = Math.min(365, Math.max(1, parseInt(opts.days ?? "30", 10)));
+    const now = Date.now();
+    const timeFrom = now - days * 24 * 60 * 60 * 1000;
+    const timeTo = now;
+    const stats = db.getEvalStats({ timeFrom, timeTo });
+    console.log("# Eval: Question Quality Improvement");
+    console.log("");
+    console.log("Period:", new Date(timeFrom).toISOString().slice(0, 10), "to", new Date(timeTo).toISOString().slice(0, 10));
+    console.log("");
+    console.log("| Metric | Value |");
+    console.log("|--------|-------|");
+    console.log("| Pairs (prior → next) |", stats.pair_count, "|");
+    console.log("| Improved |", stats.improved_count, "|");
+    console.log("| Unchanged |", stats.unchanged_count, "|");
+    console.log("| Regressed |", stats.regressed_count, "|");
+    console.log("| Improvement rate |", (stats.improvement_rate * 100).toFixed(1) + "%", "|");
+    console.log("| Avg delta (next - prior) |", stats.avg_delta, "|");
+    console.log("| Avg prior score |", stats.avg_prior_score, "|");
+    console.log("| Avg next score |", stats.avg_next_score, "|");
+    if (stats.pair_count === 0) {
+      console.log("");
+      console.log("No eval pairs yet. Run quality analysis on sessions with multiple user messages.");
+    }
   });
 
 export function run(): void {

@@ -11,7 +11,7 @@ const MODEL_SETTING_KEYS = {
 } as const;
 
 export interface ModelSettings {
-  mode_default: "local" | "external";
+  mode_default: "local" | "external" | "agent";
   external_enabled: boolean;
   provider: string;
   base_url: string;
@@ -46,7 +46,7 @@ export function setSetting(key: string, value: string): void {
 
 export function getModelSettings(): ModelSettings {
   const modeRaw = getSettingRaw(MODEL_SETTING_KEYS.modeDefault);
-  const mode = modeRaw === "external" ? "external" : "local";
+  const mode = modeRaw === "agent" ? "agent" : modeRaw === "external" ? "external" : "local";
   const externalEnabled = getSettingRaw(MODEL_SETTING_KEYS.externalEnabled) === "true";
   const provider = getSettingRaw(MODEL_SETTING_KEYS.provider) ?? DEFAULT_MODEL_SETTINGS.provider;
   const baseUrl = getSettingRaw(MODEL_SETTING_KEYS.baseUrl) ?? DEFAULT_MODEL_SETTINGS.base_url;

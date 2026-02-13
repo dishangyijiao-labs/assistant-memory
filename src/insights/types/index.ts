@@ -1,7 +1,7 @@
 import type { InsightEvidenceInput } from "../../storage/db.js";
 
 export interface InsightModelConfig {
-  mode: "local" | "external";
+  mode: "local" | "external" | "agent";
   provider?: string;
   baseUrl?: string;
   modelName?: string;

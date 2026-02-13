@@ -93,7 +93,7 @@ export interface InsightReportRecord {
   title: string;
   workspace: string;
   scope_json: string;
-  model_mode: "local" | "external";
+  model_mode: "local" | "external" | "agent";
   provider: string | null;
   model_name: string | null;
   summary_md: string;
@@ -127,7 +127,7 @@ export interface InsightReportInput {
   title?: string;
   workspace: string;
   scopeJson: string;
-  modelMode: "local" | "external";
+  modelMode: "local" | "external" | "agent";
   provider?: string | null;
   modelName?: string | null;
   summaryMd: string;

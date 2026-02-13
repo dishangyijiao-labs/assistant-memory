@@ -60,10 +60,26 @@ function toBulletList(items: string[] | undefined): string {
   return items.map((item) => `- ${item}`).join("\n");
 }
 
-export function buildQualityAnalyzerUserPrompt(input: QualityAnalyzerInput): string {
-  return [
-    "Analyze the following user request and output JSON only.",
-    "",
+export function buildQualityAnalyzerUserPrompt(
+  input: QualityAnalyzerInput,
+  ragExamples?: Array<{ content: string; score?: number | null; grade?: string | null }>
+): string {
+  const sections: string[] = ["Analyze the following user request and output JSON only.", ""];
+
+  if (ragExamples && ragExamples.length > 0) {
+    sections.push(
+      "Similar high-quality questions from your history (use as reference for good prompts):",
+      ""
+    );
+    for (let i = 0; i < ragExamples.length; i++) {
+      const ex = ragExamples[i];
+      const meta = ex.score != null ? ` [score ${ex.score}${ex.grade ? `, grade ${ex.grade}` : ""}]` : "";
+      sections.push(`--- Example ${i + 1}${meta} ---`, ex.content.trim().slice(0, 350), "");
+    }
+    sections.push("--- Question to analyze ---", "");
+  }
+
+  sections.push(
     "User question:",
     input.question.trim() || "(empty)",
     "",
@@ -81,7 +97,8 @@ export function buildQualityAnalyzerUserPrompt(input: QualityAnalyzerInput): str
     "",
     "Acceptance criteria:",
     toBulletList(input.acceptanceCriteria),
-  ].join("\n");
+  );
+  return sections.join("\n");
 }
 
 export const DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE = `# Daily Prompt Quality Report ({{date}})

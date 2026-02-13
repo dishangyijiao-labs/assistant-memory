@@ -1,7 +1,7 @@
 export const insightsReportsScriptModel = `
     function normalizeModelSettings(settings) {
       return {
-        mode_default: settings && settings.mode_default === "external" ? "external" : "local",
+        mode_default: settings && (settings.mode_default === "agent" || settings.mode_default === "external") ? settings.mode_default : "local",
         external_enabled: !!(settings && settings.external_enabled),
         provider: safeText(settings && settings.provider) || "openai-compatible",
         base_url: safeText(settings && settings.base_url) || "https://api.openai.com/v1",
@@ -11,8 +11,8 @@ export const insightsReportsScriptModel = `
 
     function modelMode() {
       var el = document.getElementById("model-mode");
-      if (el && el.value) return el.value === "external" ? "external" : "local";
-      return modelState.settings.mode_default === "external" ? "external" : "local";
+      if (el && el.value) return el.value === "agent" ? "agent" : el.value === "external" ? "external" : "local";
+      return modelState.settings.mode_default === "agent" ? "agent" : modelState.settings.mode_default === "external" ? "external" : "local";
     }
 
     function runtimeApiKey() {
@@ -25,17 +25,17 @@ export const insightsReportsScriptModel = `
     }
 
     function isModelReadyForGeneration() {
-      return modelMode() !== "external" || hasEffectiveApiKey();
+      return (modelMode() !== "external" && modelMode() !== "agent") || hasEffectiveApiKey();
     }
 
     function renderModelConfigPanel() {
       var host = document.getElementById("model-config-panel");
       if (!host) return;
-      var mode = modelState.settings.mode_default === "external" ? "external" : "local";
+      var mode = modelState.settings.mode_default === "agent" ? "agent" : modelState.settings.mode_default === "external" ? "external" : "local";
       var provider = escapeHtml(modelState.settings.provider || "openai-compatible");
       var baseUrl = escapeHtml(modelState.settings.base_url || "https://api.openai.com/v1");
       var modelName = escapeHtml(modelState.settings.model_name || "");
-      var disabled = mode === "external" ? "" : " disabled";
+      var disabled = (mode === "external" || mode === "agent") ? "" : " disabled";
       var badgeClass = modelState.hasApiKey ? "model-badge ok" : "model-badge";
       var badgeText = modelState.hasApiKey ? "API key configured" : "No API key configured";
       host.innerHTML =
@@ -49,6 +49,7 @@ export const insightsReportsScriptModel = `
             '<select id="model-mode">' +
               '<option value="local"' + (mode === "local" ? " selected" : "") + '>Local Analysis (no external API)</option>' +
               '<option value="external"' + (mode === "external" ? " selected" : "") + '>External API</option>' +
+              '<option value="agent"' + (mode === "agent" ? " selected" : "") + '>Agent (tool calling)</option>' +
             '</select>' +
           '</div>' +
           '<div class="model-field">' +
@@ -83,9 +84,12 @@ export const insightsReportsScriptModel = `
     function syncModelHint() {
       var hint = document.getElementById("model-config-hint");
       if (!hint) return;
-      if (modelMode() === "external" && !hasEffectiveApiKey()) {
+      if ((modelMode() === "external" || modelMode() === "agent") && !hasEffectiveApiKey()) {
         hint.className = "model-hint err";
-        hint.textContent = "External model API key is missing. Add a runtime key or switch to Local Analysis.";
+        hint.textContent = "API key is missing. Add a runtime key or switch to Local Analysis.";
+      } else if (modelMode() === "agent") {
+        hint.className = "model-hint ok";
+        hint.textContent = "Agent mode: LLM can call tools (search, get session, RAG) to generate targeted insights.";
       } else if (modelMode() === "external") {
         hint.className = "model-hint ok";
         hint.textContent = "External model is ready. You can generate insights now.";
@@ -120,9 +124,9 @@ export const insightsReportsScriptModel = `
 
     function saveModelConfig() {
       var payload = modelPayloadFromForm();
-      var isExternal = payload.mode === "external";
-      if (isExternal && (!payload.provider || !payload.base_url || !payload.model_name)) {
-        status("Provider, Base URL, and Model Name are required for external mode.", "err");
+      var needsApi = payload.mode === "external" || payload.mode === "agent";
+      if (needsApi && (!payload.provider || !payload.base_url || !payload.model_name)) {
+        status("Provider, Base URL, and Model Name are required for external/agent mode.", "err");
         return;
       }
       status("Saving model settings...", "warn");
