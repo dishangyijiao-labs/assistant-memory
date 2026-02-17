@@ -73,7 +73,10 @@ export async function runAgentLoop(
     messages.push({
       role: "assistant",
       content: msg.content ?? undefined,
-      tool_calls: msg.tool_calls,
+      tool_calls: msg.tool_calls?.map((tc) => ({
+        ...tc,
+        type: "function" as const,
+      })),
     });
 
     if (!msg.tool_calls || msg.tool_calls.length === 0) {

@@ -202,12 +202,18 @@ export const searchPageScript = `
       var analyzeEl = document.getElementById("analyze-session");
       if (!session) {
         titleEl.textContent = "Select a session";
-        if (analyzeEl) { analyzeEl.style.display = "none"; }
+        if (analyzeEl) {
+          analyzeEl.style.display = "none";
+          analyzeEl.setAttribute("href", "#");
+          delete analyzeEl.dataset.sessionId;
+        }
         return;
       }
       titleEl.textContent = getSessionTitle(session);
       if (analyzeEl) {
-        analyzeEl.href = "/session?session_id=" + encodeURIComponent(String(session.id));
+        var sid = String(session.id || "");
+        analyzeEl.href = "/session?session_id=" + encodeURIComponent(sid);
+        analyzeEl.dataset.sessionId = sid;
         analyzeEl.style.display = "";
       }
     }
@@ -418,6 +424,16 @@ export const searchPageScript = `
 
     document.getElementById("btn-settings").addEventListener("click", function () {
       window.location.href = "/settings";
+    });
+
+    document.getElementById("analyze-session").addEventListener("click", function (e) {
+      e.preventDefault();
+      var sid = this.dataset.sessionId || (selectedSession && selectedSession.id ? String(selectedSession.id) : "");
+      if (!sid) {
+        showToast("Select a session first");
+        return;
+      }
+      window.location.href = "/session?session_id=" + encodeURIComponent(sid);
     });
 
     /* Init */

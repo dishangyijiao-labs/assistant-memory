@@ -144,6 +144,9 @@ export function resolveModelApiKey(settings: db.ModelSettings, apiKeyFromRequest
   if (runtimeModelApiKey && runtimeModelApiKey.trim()) {
     return runtimeModelApiKey.trim();
   }
+  if (typeof settings.api_key === "string" && settings.api_key.trim()) {
+    return settings.api_key.trim();
+  }
   const keyRef = settings.key_ref.trim();
   if (keyRef.startsWith("env:")) {
     const envName = keyRef.slice(4).trim();

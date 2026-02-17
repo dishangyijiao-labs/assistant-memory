@@ -8,6 +8,7 @@ const MODEL_SETTING_KEYS = {
   baseUrl: "model.base_url",
   modelName: "model.model_name",
   keyRef: "model.key_ref",
+  apiKey: "model.api_key",
 } as const;
 
 export interface ModelSettings {
@@ -17,6 +18,7 @@ export interface ModelSettings {
   base_url: string;
   model_name: string;
   key_ref: string;
+  api_key: string;
 }
 
 const DEFAULT_MODEL_SETTINGS: ModelSettings = {
@@ -26,6 +28,7 @@ const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   base_url: "https://api.openai.com/v1",
   model_name: "",
   key_ref: "",
+  api_key: "",
 };
 
 function getSettingRaw(key: string): string | null {
@@ -52,6 +55,7 @@ export function getModelSettings(): ModelSettings {
   const baseUrl = getSettingRaw(MODEL_SETTING_KEYS.baseUrl) ?? DEFAULT_MODEL_SETTINGS.base_url;
   const modelName = getSettingRaw(MODEL_SETTING_KEYS.modelName) ?? DEFAULT_MODEL_SETTINGS.model_name;
   const keyRef = getSettingRaw(MODEL_SETTING_KEYS.keyRef) ?? DEFAULT_MODEL_SETTINGS.key_ref;
+  const apiKey = getSettingRaw(MODEL_SETTING_KEYS.apiKey) ?? DEFAULT_MODEL_SETTINGS.api_key;
   return {
     mode_default: mode,
     external_enabled: externalEnabled,
@@ -59,6 +63,7 @@ export function getModelSettings(): ModelSettings {
     base_url: baseUrl,
     model_name: modelName,
     key_ref: keyRef,
+    api_key: apiKey,
   };
 }
 
@@ -80,6 +85,9 @@ export function updateModelSettings(patch: Partial<ModelSettings>): ModelSetting
   }
   if (typeof patch.key_ref === "string") {
     setSetting(MODEL_SETTING_KEYS.keyRef, patch.key_ref);
+  }
+  if (typeof patch.api_key === "string") {
+    setSetting(MODEL_SETTING_KEYS.apiKey, patch.api_key);
   }
   return getModelSettings();
 }

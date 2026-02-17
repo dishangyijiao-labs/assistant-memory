@@ -9,8 +9,6 @@ export const insightsReportsScriptCommon = `
     };
 
     var sidebarState = {
-      source: "",
-      q: "",
       page: 1,
       pageSize: 10,
       total: 0,
@@ -140,8 +138,6 @@ export const insightsReportsScriptCommon = `
     function loadSidebarSessions() {
       var offset = (sidebarState.page - 1) * sidebarState.pageSize;
       var query = "limit=" + sidebarState.pageSize + "&offset=" + offset;
-      if (sidebarState.source) query += "&source=" + encodeURIComponent(sidebarState.source);
-      if (sidebarState.q) query += "&q=" + encodeURIComponent(sidebarState.q);
       return api("/api/sessions?" + query)
         .then(function(data) {
           sidebarState.sessions = data.sessions || [];

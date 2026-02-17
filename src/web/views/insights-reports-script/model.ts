@@ -5,7 +5,8 @@ export const insightsReportsScriptModel = `
         external_enabled: !!(settings && settings.external_enabled),
         provider: safeText(settings && settings.provider) || "openai-compatible",
         base_url: safeText(settings && settings.base_url) || "https://api.openai.com/v1",
-        model_name: safeText(settings && settings.model_name)
+        model_name: safeText(settings && settings.model_name),
+        api_key: safeText(settings && settings.api_key)
       };
     }
 
@@ -35,6 +36,7 @@ export const insightsReportsScriptModel = `
       var provider = escapeHtml(modelState.settings.provider || "openai-compatible");
       var baseUrl = escapeHtml(modelState.settings.base_url || "https://api.openai.com/v1");
       var modelName = escapeHtml(modelState.settings.model_name || "");
+      var persistedApiKey = escapeHtml(modelState.settings.api_key || "");
       var disabled = (mode === "external" || mode === "agent") ? "" : " disabled";
       var badgeClass = modelState.hasApiKey ? "model-badge ok" : "model-badge";
       var badgeText = modelState.hasApiKey ? "API key configured" : "No API key configured";
@@ -67,8 +69,8 @@ export const insightsReportsScriptModel = `
         '</div>' +
         '<div class="model-grid two">' +
           '<div class="model-field">' +
-            '<label for="model-api-key">API Key (runtime only)</label>' +
-            '<input id="model-api-key" type="password" placeholder="Not persisted; kept only in-memory for this process"' + disabled + ' />' +
+            '<label for="model-api-key">API Key (saved locally)</label>' +
+            '<input id="model-api-key" type="password" value="' + persistedApiKey + '" placeholder="Saved in local app database"' + disabled + ' />' +
           '</div>' +
           '<div class="model-actions">' +
             '<button id="btn-save-model" class="btn-ghost" type="button">Save Settings</button>' +
@@ -76,7 +78,7 @@ export const insightsReportsScriptModel = `
             '<a href="/settings" class="btn-ghost" style="text-decoration:none;">Advanced Settings</a>' +
           '</div>' +
         '</div>' +
-        '<p class="model-note">Best practice: use an env-based key in production. Runtime key is never written to the database.</p>' +
+        '<p class="model-note">API key is stored locally on this machine for persistence. For production, env-based key management is still recommended.</p>' +
         '<div id="model-config-hint" class="model-hint"></div>';
       syncModelHint();
     }
@@ -125,6 +127,7 @@ export const insightsReportsScriptModel = `
     function saveModelConfig() {
       var payload = modelPayloadFromForm();
       var needsApi = payload.mode === "external" || payload.mode === "agent";
+      var externalEnabled = payload.mode === "external" || payload.mode === "agent";
       if (needsApi && (!payload.provider || !payload.base_url || !payload.model_name)) {
         status("Provider, Base URL, and Model Name are required for external/agent mode.", "err");
         return;
@@ -135,7 +138,7 @@ export const insightsReportsScriptModel = `
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode_default: payload.mode,
-          external_enabled: isExternal,
+          external_enabled: externalEnabled,
           provider: payload.provider,
           base_url: payload.base_url,
           model_name: payload.model_name,

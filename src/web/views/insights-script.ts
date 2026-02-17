@@ -236,6 +236,7 @@ export const insightsScript = `
         document.getElementById("model-base").value = s.base_url || "https://api.openai.com/v1";
         document.getElementById("model-name").value = s.model_name || "";
         document.getElementById("model-enabled").checked = !!s.external_enabled;
+        document.getElementById("model-key").value = s.api_key || "";
         updateExternalFieldsVisibility();
       });
     }

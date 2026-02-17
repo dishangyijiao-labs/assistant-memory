@@ -66,8 +66,8 @@ export default function getInsightsPage(): string {
               <input id="model-name" type="text" placeholder="gpt-4o-mini" />
             </div>
             <div>
-              <label for="model-key">API Key (runtime only)</label>
-              <input id="model-key" type="password" placeholder="Not persisted in database" />
+              <label for="model-key">API Key (saved locally)</label>
+              <input id="model-key" type="password" placeholder="Saved in local app database" />
             </div>
           </div>
         </div>

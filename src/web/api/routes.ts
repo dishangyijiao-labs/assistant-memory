@@ -238,10 +238,12 @@ export function createHandler() {
           if (typeof body.key_ref === "string") {
             patch.key_ref = body.key_ref.trim();
           }
-          if (typeof body.api_key === "string" && body.api_key.trim()) {
-            setRuntimeModelApiKey(body.api_key.trim());
+          if (typeof body.api_key === "string") {
+            const persistedApiKey = body.api_key.trim();
+            patch.api_key = persistedApiKey;
+            setRuntimeModelApiKey(persistedApiKey || null);
             if (!patch.key_ref) {
-              patch.key_ref = "runtime";
+              patch.key_ref = persistedApiKey ? "db" : "";
             }
           }
           const settings = db.updateModelSettings(patch);
@@ -406,8 +408,10 @@ export function createHandler() {
       if (path === "/api/quality/analyze" && method === "POST") {
         try {
           const body = await readJsonBody(req);
-          const sessionId = typeof body.session_id === "number" ? Math.trunc(body.session_id) : null;
-          if (!sessionId || sessionId < 1) {
+          const sid = body.session_id;
+          const sessionId =
+            typeof sid === "number" ? Math.trunc(sid) : typeof sid === "string" ? parseInt(sid, 10) : null;
+          if (!sessionId || sessionId < 1 || !Number.isFinite(sessionId)) {
             sendError(res, 400, "INVALID_ARGUMENT", "session_id is required and must be positive");
             return;
           }
@@ -417,10 +421,6 @@ export function createHandler() {
             return;
           }
           const settings = db.getModelSettings();
-          if (!settings.external_enabled) {
-            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "External model must be enabled in Settings");
-            return;
-          }
           const apiKey = resolveModelApiKey(settings);
           if (!apiKey) {
             sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "API key is missing. Configure in Settings.");

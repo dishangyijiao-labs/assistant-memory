@@ -8,24 +8,6 @@ export default function getInsightsReportsPage(): string {
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-head">AssistMem</div>
-      <div class="sidebar-filter">
-        <select id="sb-source" class="source-select">
-          <option value="">Source: All</option>
-          <option value="cursor">Cursor IDE</option>
-          <option value="copilot">Copilot</option>
-          <option value="cursor-cli">Cursor CLI</option>
-          <option value="claude-code">Claude Code</option>
-          <option value="codex">Codex</option>
-          <option value="gemini">Gemini</option>
-        </select>
-        <div class="chip-row">
-          <select class="chip-select"><option>Workspace</option></select>
-          <select class="chip-select"><option>Time Range</option></select>
-        </div>
-        <div class="search-wrap">
-          <input id="sb-search" class="search-input" type="search" placeholder="Search..." />
-        </div>
-      </div>
       <div id="sb-sessions" class="session-list"></div>
       <div class="pager">
         <button id="sb-prev" type="button">&#8249;</button>

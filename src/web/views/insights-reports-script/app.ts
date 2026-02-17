@@ -1,15 +1,5 @@
 export const insightsReportsScriptApp = `
     function wireGlobalEvents() {
-      document.getElementById("sb-source").addEventListener("change", function() {
-        sidebarState.source = this.value || "";
-        sidebarState.page = 1;
-        void loadSidebarSessions();
-      });
-      document.getElementById("sb-search").addEventListener("input", function() {
-        sidebarState.q = this.value || "";
-        sidebarState.page = 1;
-        void loadSidebarSessions();
-      });
       document.getElementById("sb-prev").addEventListener("click", function() {
         if (sidebarState.page <= 1) return;
         sidebarState.page -= 1;

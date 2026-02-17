@@ -1,6 +1,7 @@
 import { writeFileSync } from "fs";
 import { Command } from "commander";
 import { runIngest } from "./ingest/index.js";
+import { ingestCursor } from "./ingest/cursor.js";
 import * as db from "./storage/db.js";
 import { startServer } from "./web/server.js";
 import {
@@ -184,6 +185,21 @@ program
     } else {
       console.log(md);
     }
+  });
+
+program
+  .command("cursor-dump")
+  .description("Dump first Cursor session structure for debugging role attribution.")
+  .action(() => {
+    const sessions = ingestCursor();
+    if (sessions.length === 0) {
+      console.log("No Cursor sessions found.");
+      return;
+    }
+    const s = sessions[0];
+    const sample = s.messages.slice(0, 8).map((m) => ({ role: m.role, content_preview: m.content.slice(0, 100) + (m.content.length > 100 ? "…" : "") }));
+    console.log(JSON.stringify({ external_id: s.external_id, message_count: s.messages.length, sample }, null, 2));
+    console.log("\nRun 'npx assistmem index' then refresh the session page to apply role fixes.");
   });
 
 program

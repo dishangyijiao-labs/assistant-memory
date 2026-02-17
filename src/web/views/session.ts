@@ -108,6 +108,10 @@ export default function getSessionPage(): string {
     .btn-analyze { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.8rem; cursor: pointer; }
     .btn-analyze:hover { background: var(--accent-hover); }
     .btn-analyze:disabled { opacity: 0.6; cursor: not-allowed; }
+    .analyze-status { margin-top: 0.35rem; font-size: 0.78rem; color: var(--muted); text-align: right; min-height: 1.1rem; }
+    .analyze-status.error { color: #b91c1c; }
+    .analyze-status.ok { color: #166534; }
+    .analyze-status a { color: inherit; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -118,7 +122,10 @@ export default function getSessionPage(): string {
         <div class="title" id="title">Session</div>
         <div class="meta" id="meta"></div>
       </div>
-      <button class="btn-analyze" id="btnAnalyze" style="display:none">Analyze quality</button>
+      <div>
+        <button type="button" class="btn-analyze" id="btnAnalyze" style="display:none">Analyze quality</button>
+        <div class="analyze-status" id="analyzeStatus"></div>
+      </div>
     </div>
     <div id="messages">
       <div class="skeleton skeleton-msg" style="width:60%"></div>
@@ -224,7 +231,21 @@ export default function getSessionPage(): string {
 
       var userCount = (data.messages || []).filter(function(m) { return (m.role || "").toLowerCase() === "user"; }).length;
       var btn = document.getElementById("btnAnalyze");
-      if (userCount > 0) { btn.style.display = "inline-block"; btn.onclick = function() { runAnalyze(s.id, btn); }; }
+      var status = document.getElementById("analyzeStatus");
+      if (btn) {
+        btn.style.display = userCount > 0 ? "inline-block" : "none";
+        btn.disabled = false;
+        btn.textContent = "Analyze quality";
+        if (userCount > 0) {
+          btn.dataset.sessionId = String(s.id);
+        } else {
+          delete btn.dataset.sessionId;
+        }
+      }
+      if (status) {
+        status.textContent = "";
+        status.className = "analyze-status";
+      }
 
       var qualityScores = data.quality_scores || {};
       var html = (data.messages || []).map(function (m) {
@@ -255,24 +276,69 @@ export default function getSessionPage(): string {
     }
 
     function runAnalyze(sessionId, btn) {
+      if (!btn) return;
+      if (!sessionId || !Number.isFinite(sessionId)) return;
+      var status = document.getElementById("analyzeStatus");
       btn.disabled = true;
       btn.textContent = "Analyzing…";
+      if (status) {
+        status.textContent = "Running quality analysis...";
+        status.className = "analyze-status";
+      }
       fetch("/api/quality/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId }),
       })
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          return res.text().then(function(text) {
+            var data;
+            try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
+            if (!res.ok) {
+              var msg = (data && data.error && data.error.message) ? data.error.message : (data && data.error) ? String(data.error) : text ? text.slice(0, 200) : "Analysis failed";
+              var err = new Error(msg);
+              if (data && data.error && typeof data.error.code === "string") err.code = data.error.code;
+              throw err;
+            }
+            return data;
+          });
+        })
         .then(function(result) {
-          if (result.error) throw new Error(result.error.message || "Analysis failed");
           btn.textContent = "Analyzed " + (result.analyzed || 0);
+          if (status) {
+            status.textContent = "Done. Refreshing...";
+            status.className = "analyze-status ok";
+          }
           setTimeout(function() { location.reload(); }, 600);
         })
         .catch(function(err) {
           btn.disabled = false;
           btn.textContent = "Analyze quality";
-          alert(err.message || "Analysis failed. Ensure Settings → Model is configured.");
+          var msg = err && err.message ? err.message : "Analysis failed. Ensure Settings → Model is configured.";
+          var code = err && err.code ? String(err.code) : "";
+          var needsApiKeyLink = code === "QUALITY_MODEL_NOT_CONFIGURED" || /api key/i.test(msg);
+          if (status) {
+            if (needsApiKeyLink) {
+              status.innerHTML = escapeHtml(msg) + ' <a href="/insights/new">Configure API key</a>';
+            } else {
+              status.textContent = msg;
+            }
+            status.className = "analyze-status error";
+          }
         });
+    }
+
+    var btnAnalyze = document.getElementById("btnAnalyze");
+    if (btnAnalyze) {
+      btnAnalyze.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (btnAnalyze.disabled) return;
+        var sidRaw = btnAnalyze.dataset.sessionId || "";
+        var sid = parseInt(sidRaw, 10);
+        if (!sid || !Number.isFinite(sid)) return;
+        runAnalyze(sid, btnAnalyze);
+      });
     }
 
     var params = getQueryParams();
@@ -292,4 +358,3 @@ export default function getSessionPage(): string {
 </body>
 </html>`;
 }
-

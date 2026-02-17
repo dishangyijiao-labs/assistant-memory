@@ -119,24 +119,122 @@ function cursorConvToSession(conv: Record<string, unknown>): RawSession | null {
   };
 }
 
+function contentSuggestsUser(content: string): boolean {
+  const c = content.trim();
+  if (c.length < 10) return false;
+  if (c.includes("If uncertain, prefer asking precise follow-up questions")) return true;
+  if (c.includes("我想") || c.includes("我希望") || c.includes("你基于") || c.includes("你从")) return true;
+  if (c.includes("请") && (c.includes("？") || c.includes("?"))) return true;
+  return false;
+}
+
+function normalizeCursorRole(role: string | undefined, isUser?: boolean): "user" | "assistant" | null {
+  if (typeof isUser === "boolean") return isUser ? "user" : "assistant";
+  const r = (role ?? "").toLowerCase();
+  if (
+    r.includes("user") ||
+    r === "human" ||
+    r.includes("prompt") ||
+    r.includes("request") ||
+    r === "inbound"
+  )
+    return "user";
+  if (
+    r.includes("assistant") ||
+    r.includes("model") ||
+    r.includes("ai") ||
+    r.includes("bot") ||
+    r.includes("copilot") ||
+    r.includes("response") ||
+    r.includes("completion") ||
+    r === "outbound"
+  )
+    return "assistant";
+  return null;
+}
+
+function extractContent(obj: Record<string, unknown>): string {
+  if (typeof obj.content === "string") return obj.content;
+  if (typeof obj.text === "string") return obj.text;
+  if (Array.isArray(obj.parts))
+    return (obj.parts as Array<{ text?: string }>).map((p) => p.text ?? "").join("\n").trim();
+  if (obj.message) return String((obj.message as Record<string, unknown>).content ?? obj.message);
+  return "";
+}
+
+function parseTimestamp(obj: Record<string, unknown>, fallback: number): number {
+  const ts = (obj.timestamp ?? obj.createdAt ?? obj.time) as number | undefined;
+  return typeof ts === "number" ? ts : new Date(String(ts ?? "")).getTime() || fallback;
+}
+
 function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
   const messages: RawMessage[] = [];
+  const baseTs = Date.now();
+
+  const bubbles = conv.bubbles ?? conv.turns;
+  if (Array.isArray(bubbles)) {
+    for (let i = 0; i < bubbles.length; i++) {
+      const b = bubbles[i] as Record<string, unknown> | undefined;
+      if (!b || typeof b !== "object") continue;
+      const prompt = b.prompt ?? b.request ?? b.userMessage ?? b.query;
+      const response = b.response ?? b.completion ?? b.assistantMessage ?? b.answer;
+      const tsPrompt = parseTimestamp(
+        (typeof prompt === "object" && prompt !== null ? prompt : {}) as Record<string, unknown>,
+        baseTs - (bubbles.length - i) * 2000
+      );
+      const tsResponse = parseTimestamp(
+        (typeof response === "object" && response !== null ? response : {}) as Record<string, unknown>,
+        tsPrompt + 1
+      );
+      if (typeof prompt === "string" && prompt.trim()) {
+        messages.push({ role: "user", content: prompt.trim(), timestamp: tsPrompt });
+      } else if (prompt && typeof prompt === "object") {
+        const c = extractContent(prompt as Record<string, unknown>);
+        if (c) messages.push({ role: "user", content: c, timestamp: tsPrompt });
+      }
+      if (typeof response === "string" && response.trim()) {
+        const r = response.trim();
+        const role = contentSuggestsUser(r) ? "user" : "assistant";
+        messages.push({ role, content: r, timestamp: tsResponse });
+      } else if (response && typeof response === "object") {
+        const c = extractContent(response as Record<string, unknown>);
+        if (c) {
+          const role = contentSuggestsUser(c) ? "user" : "assistant";
+          messages.push({ role, content: c, timestamp: tsResponse });
+        }
+      }
+    }
+    if (messages.length > 0) return messages;
+  }
+
   const items = (conv.messages ?? conv.chatData ?? conv.messagesList ?? conv.items) as unknown[] | undefined;
   if (!Array.isArray(items)) return messages;
-  for (const item of items) {
+
+  let lastRole: "user" | "assistant" = "assistant";
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
     if (!item || typeof item !== "object") continue;
     const obj = item as Record<string, unknown>;
-    const role = (obj.role ?? obj.type ?? obj.messageType) as string | undefined;
-    let content = "";
-    if (typeof obj.content === "string") content = obj.content;
-    else if (typeof obj.text === "string") content = obj.text;
-    else if (Array.isArray(obj.parts)) content = (obj.parts as Array<{ text?: string }>).map((p) => p.text ?? "").join("\n");
-    else if (obj.message) content = String((obj.message as Record<string, unknown>).content ?? obj.message);
+    const roleRaw = (obj.role ?? obj.type ?? obj.messageType ?? obj.author ?? obj.sender) as string | undefined;
+    const isUser = obj.isUser !== undefined ? !!obj.isUser : undefined;
+    const content = extractContent(obj);
     if (!content.trim()) continue;
-    const roleNorm = role?.toLowerCase().includes("user") ? "user" : role?.toLowerCase().includes("assistant") ? "assistant" : "user";
-    const ts = (obj.timestamp ?? obj.createdAt ?? obj.time ?? Date.now()) as number;
-    const timestamp = typeof ts === "number" ? ts : new Date(String(ts)).getTime();
-    messages.push({ role: roleNorm as "user" | "assistant", content, timestamp, external_id: (obj.id ?? obj.uuid) as string | undefined });
+
+    let roleNorm = normalizeCursorRole(roleRaw, isUser);
+    if (roleNorm === null) {
+      roleNorm = lastRole === "user" ? "assistant" : "user";
+    }
+    if (roleNorm === "assistant" && contentSuggestsUser(content)) {
+      roleNorm = "user";
+    }
+    lastRole = roleNorm;
+    const ts = parseTimestamp(obj, baseTs - (items.length - i) * 1000);
+    messages.push({
+      role: roleNorm as "user" | "assistant",
+      content,
+      timestamp: ts,
+      external_id: (obj.id ?? obj.uuid) as string | undefined,
+    });
   }
   return messages;
 }
