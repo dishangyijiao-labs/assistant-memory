@@ -3,13 +3,15 @@ name: Build Mac DMG
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build-mac:
     runs-on: macos-14  # Apple Silicon runner for aarch64
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +40,15 @@ jobs:
         env:
           CI: true
 
-      - name: Upload DMG
+      - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: AssistMem-macOS-aarch64
-          path: src-tauri/target/release/bundle/macos/*.dmg
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/dmg/*.dmg
+          generate_release_notes: true
