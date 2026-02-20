@@ -75,22 +75,32 @@ export const searchPageScript = `
       var sec = Math.floor(diff / 1000);
       if (sec < 60) return "just now";
       var min = Math.floor(sec / 60);
-      if (min < 60) return min + " min ago";
+      if (min < 60) return min + "m ago";
       var hr = Math.floor(min / 60);
-      if (hr < 24) return hr + (hr === 1 ? " hour ago" : " hours ago");
+      if (hr < 24) return hr + "h ago";
       var days = Math.floor(hr / 24);
-      if (days === 1) return "Yesterday";
-      if (days < 7) return days + " days ago";
+      if (days < 7) return days + "d ago";
+      try {
+        return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ts));
+      } catch (_e) {}
       return formatTime(ts);
+    }
+
+    function getTimeGroup(ts) {
+      if (!ts) return "Older";
+      var now = new Date();
+      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var yesterdayStart = todayStart - 86400000;
+      var weekStart = todayStart - 6 * 86400000;
+      if (ts >= todayStart) return "Today";
+      if (ts >= yesterdayStart) return "Yesterday";
+      if (ts >= weekStart) return "This Week";
+      return "Older";
     }
 
     function getSessionTitle(session) {
       if (session.preview) {
-        var preview = session.preview.trim();
-        if (preview.length > 60) {
-          return preview.substring(0, 60) + "…";
-        }
-        return preview;
+        return session.preview.trim();
       }
       var ws = session.workspace || "";
       if (!ws) return "Session #" + session.id;
@@ -196,23 +206,31 @@ export const searchPageScript = `
     function renderSessions(list) {
       var host = document.getElementById("session-list");
       if (!list || list.length === 0) {
-        host.innerHTML = '<div class="empty-state"><p>No sessions found.</p><p class="guidance">Try adjusting your filters, or click <strong>Index Now</strong>.</p></div>';
+        host.innerHTML = '<div class="empty-state"><p>No sessions found.</p><p class="guidance">Try adjusting your filters, or click <strong>Sync Local Chats</strong>.</p></div>';
         return;
       }
-      var html = list.map(function (s, idx) {
+      var html = "";
+      var lastGroup = null;
+      list.forEach(function (s, idx) {
+        var group = getTimeGroup(s.last_at);
+        if (group !== lastGroup) {
+          html += '<div class="session-group-label">' + escapeHtml(group) + '</div>';
+          lastGroup = group;
+        }
         var active = selectedSession && String(selectedSession.id) === String(s.id) ? " active" : "";
         var focused = idx === focusedIndex ? " focused" : "";
         var title = getSessionTitle(s);
         var label = sourceLabels[s.source] || s.source || "?";
         var ago = timeAgo(s.last_at);
-        return '<div class="session-item' + active + focused + '" data-session-id="' + s.id + '" data-index="' + idx + '" role="option"' + (active ? ' aria-selected="true"' : '') + '>' +
+        html += '<div class="session-item' + active + focused + '" data-session-id="' + s.id + '" data-index="' + idx + '" role="option"' + (active ? ' aria-selected="true"' : '') + '>' +
           '<div class="session-item-title" title="' + escapeHtml(s.workspace || "") + '">' + escapeHtml(title) + '</div>' +
           '<div class="session-item-meta">' +
             '<span class="source-badge">' + escapeHtml(label) + '</span>' +
+            '<span class="session-meta-sep">\u00b7</span>' +
             '<span class="session-time">' + escapeHtml(ago) + '</span>' +
           '</div>' +
         '</div>';
-      }).join("");
+      });
       host.innerHTML = html;
     }
 
