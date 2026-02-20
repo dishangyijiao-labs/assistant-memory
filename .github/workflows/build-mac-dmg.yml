@@ -8,7 +8,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
+
   build-mac:
+    needs: [create-release]
+    if: always() && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
     runs-on: macos-14  # Apple Silicon runner for aarch64
     permissions:
       contents: write
@@ -46,9 +61,9 @@ jobs:
           name: AssistMem-macOS-aarch64
           path: src-tauri/target/release/bundle/dmg/*.dmg
 
-      - name: Publish GitHub Release
+      - name: Attach DMG to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: src-tauri/target/release/bundle/dmg/*.dmg
-          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}

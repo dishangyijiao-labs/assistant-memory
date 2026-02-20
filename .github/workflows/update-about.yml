@@ -9,7 +9,7 @@ jobs:
   update-about:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      administration: write
 
     steps:
       - name: Update repository description and topics
