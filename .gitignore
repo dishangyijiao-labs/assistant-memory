@@ -4,3 +4,7 @@ dist/
 .env
 .DS_Store
 .claude/
+report.md
+
+# Rust/Tauri
+src-tauri/target/

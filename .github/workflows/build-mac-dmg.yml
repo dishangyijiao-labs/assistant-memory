@@ -1,0 +1,45 @@
+name: Build Mac DMG
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-14  # Apple Silicon runner for aarch64
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Mac DMG
+        run: npm run mac:release
+        env:
+          CI: true
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssistMem-macOS-aarch64
+          path: src-tauri/target/release/bundle/macos/*.dmg

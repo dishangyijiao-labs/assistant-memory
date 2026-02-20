@@ -48,13 +48,14 @@ npx assistmem search "bug fix" --limit 10
 # Stats (DB path and counts)
 npx assistmem stats
 
-# Web search (browser UI at http://localhost:3000)
+# Web UI (browser at http://localhost:3000)
 npx assistmem serve
 npx assistmem serve --port 4000
 
 # Mac desktop app (Tauri) — see [DESKTOP.md](DESKTOP.md)
 npm run mac          # development
 npm run mac:build    # production .app
+npm run mac:release  # beta: .app + .dmg for Apple Silicon
 
 # Print prompt-quality kit (scorer+rewriter prompt and daily report template)
 npx assistmem quality-kit
@@ -64,6 +65,10 @@ npx assistmem quality-kit --format json
 npm run build   # required before first use
 npx assistmem quality-report
 npx assistmem quality-report --days 7 --limit 10 -o report.md
+
+# Eval stats (quality improvement rate when user's next question scores higher)
+npx assistmem eval-report
+npx assistmem eval-report --days 30
 ```
 
 ## Prompt quality analysis (Web)
@@ -74,7 +79,7 @@ npx assistmem quality-report --days 7 --limit 10 -o report.md
 4. Click **Analyze quality** to score each user question and get rewrites
 5. Use **Copy** on rewrite chips (Short / Engineering / Exploratory) to improve prompts
 
-Quality analysis uses **RAG**: similar high-quality questions from your history are retrieved via FTS5 and injected as few-shot examples into the LLM context for more targeted feedback. See [docs/GOOD_QUESTION_STANDARDS.md](docs/GOOD_QUESTION_STANDARDS.md).
+Quality analysis uses **RAG**: similar high-quality questions from your history are retrieved via FTS5 and injected as few-shot examples into the LLM context for more targeted feedback.
 
 ## Database
 
@@ -97,4 +102,4 @@ Quality analysis uses **RAG**: similar high-quality questions from your history 
 The package name **assistmem** is used so the tool is not limited to “IDE” only: it includes Cursor IDE, Copilot (VS Code), and CLI tools (Cursor, Claude Code, Codex, Gemini). 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

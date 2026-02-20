@@ -1,51 +1,69 @@
 # AssistMem Desktop (macOS)
 
-本地 Mac 桌面客户端，基于 Tauri 2 构建，内嵌 Web UI 与本地 Node 后端。
+Native Mac desktop client built with Tauri 2, embedding the Web UI and local Node backend.
 
-## 前置要求
+## Prerequisites
 
 - **Node.js** >= 18
-- **Rust**（[rustup](https://rustup.rs/)）
-- **Xcode Command Line Tools**：`xcode-select --install`
+- **Rust** ([rustup](https://rustup.rs/))
+- **Xcode Command Line Tools**: `xcode-select --install`
 
-## 开发模式运行
+## Development
 
 ```bash
-# 一键：构建 + 复制资源 + 启动 Tauri 开发窗口
 npm run mac
 ```
 
-或分步执行：
+This builds, copies resources, and launches the Tauri dev window.
+
+**After changing icons**: Run `npm run desktop:clean` first, then `npm run mac`. Tauri caches the build; a clean build picks up new icons.
+
+Or step by step:
 
 ```bash
-npm run build                    # 编译 TypeScript
-npm run desktop:prepare          # 将 dist 复制到 Tauri 资源目录
-npm run desktop:dev              # 启动 Tauri 开发模式
+npm run build                    # Compile TypeScript
+npm run desktop:prepare          # Copy dist to Tauri resources
+npm run desktop:dev             # Start Tauri dev mode
 ```
 
-开发模式下会：
+In dev mode:
 
-1. 启动本地后端 `node dist/index.js serve --port 3939`
-2. 打开 Tauri 窗口，自动跳转到 http://127.0.0.1:3939/
+1. Local backend starts: `node dist/index.js serve --port 3939`
+2. Tauri window opens and navigates to http://127.0.0.1:3939/
 
-## 生产构建（打包 .app）
+## Production build (.app)
 
 ```bash
 npm run mac:build
 ```
 
-产物在 `src-tauri/target/release/`（或 `bundle/macos/` 下的 `.app`）。
+Output: `src-tauri/target/release/bundle/macos/AssistMem.app`
 
-## 仅 Web 模式（无桌面窗口）
+## Beta release (Mac Apple Silicon)
+
+On **Apple Silicon (M1/M2/M3) Mac**, build `.app` and `.dmg`:
+
+```bash
+npm run mac:release
+```
+
+- **Target**: `aarch64-apple-darwin` (Apple Silicon only)
+- **CI**: Pushing to `main` on GitHub triggers a build; the DMG is available as an artifact in the [Actions](https://github.com/dishangyijiao/assistmem/actions) tab.
+- **Output**: `src-tauri/target/release/bundle/macos/`
+  - `AssistMem.app` — Run directly or distribute
+  - `AssistMem_0.1.0-beta.1_aarch64.dmg` — Installer; user drags app to Applications
+- **Unsigned**: Beta uses `--no-sign`. User must right-click → Open on first launch to bypass Gatekeeper.
+
+## Web-only (no desktop window)
 
 ```bash
 npm run build
 npx assistmem serve --port 3939
-# 浏览器打开 http://localhost:3939
+# Open http://localhost:3939 in browser
 ```
 
-## 故障排查
+## Troubleshooting
 
-- **构建失败**：确保 `npm run build` 成功，检查 `dist/` 是否包含 `storage/queries/quality.js`
-- **端口占用**：默认 3939，可设置 `ASSISTMEM_DESKTOP_PORT=4000` 后重试
-- **Rust 未安装**：`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+- **Build fails**: Ensure `npm run build` succeeds; verify `dist/` contains `storage/queries/quality.js`
+- **Port in use**: Default 3939; set `ASSISTMEM_DESKTOP_PORT=4000` to use a different port
+- **Rust not installed**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
