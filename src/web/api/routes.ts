@@ -36,6 +36,8 @@ import {
 import { analyzeSession } from "../../insights/quality-analyzer.js";
 
 const DEFAULT_PORT = 3000;
+const MIN_INSIGHT_TOTAL_MESSAGES = 10;
+const MIN_INSIGHT_USER_MESSAGES = 5;
 
 export function createHandler() {
   return function handler(req: IncomingMessage, res: ServerResponse): void {
@@ -50,8 +52,11 @@ export function createHandler() {
       if (path === "/api/index" && method === "POST") {
         try {
           const enabledSources = db.listEnabledSources();
-          const fallbackSources = (Object.keys(SOURCE_LABELS) as db.Source[]);
-          const sources = enabledSources.length > 0 ? enabledSources : fallbackSources;
+          if (enabledSources.length === 0) {
+            sendError(res, 400, "NO_ENABLED_SOURCE", "No AI tool enabled. Enable at least one source in Advanced.");
+            return;
+          }
+          const sources = enabledSources;
           const stats = runIngest({ sources });
           const syncAt = Date.now();
           for (const source of sources) {
@@ -155,6 +160,19 @@ export function createHandler() {
                 });
           if (messages.length === 0) {
             sendError(res, 400, "INVALID_ARGUMENT", "No messages found in selected scope or session selection");
+            return;
+          }
+          const userMessageCount = messages.reduce(
+            (count, message) => count + (String(message.role || "").toLowerCase() === "user" ? 1 : 0),
+            0
+          );
+          if (messages.length < MIN_INSIGHT_TOTAL_MESSAGES || userMessageCount < MIN_INSIGHT_USER_MESSAGES) {
+            sendError(
+              res,
+              400,
+              "INSIGHTS_SAMPLE_TOO_SMALL",
+              `Need at least ${MIN_INSIGHT_TOTAL_MESSAGES} total messages and ${MIN_INSIGHT_USER_MESSAGES} user messages. Current: ${messages.length} total, ${userMessageCount} user.`
+            );
             return;
           }
           const insight = await generateInsight(messages, modelConfig);
@@ -423,13 +441,13 @@ export function createHandler() {
           const settings = db.getModelSettings();
           const apiKey = resolveModelApiKey(settings);
           if (!apiKey) {
-            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "API key is missing. Configure in Settings.");
+            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "API key is missing. Configure in Insights Setup.");
             return;
           }
           const baseUrl = (settings.base_url || "https://api.openai.com/v1").replace(/\/+$/, "");
           const modelName = settings.model_name || "gpt-4o-mini";
           if (!modelName) {
-            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "model_name is required in Settings");
+            sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "model_name is required in Insights Setup");
             return;
           }
           const result = await analyzeSession(sessionId, {
@@ -445,6 +463,87 @@ export function createHandler() {
         } catch (err) {
           const message = err instanceof Error ? err.message : "Quality analysis failed";
           sendError(res, 500, "QUALITY_ANALYSIS_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/insights/tomorrow-plan" && method === "POST") {
+        try {
+          const body = await readJsonBody(req);
+          const action = typeof body.action === "string" ? body.action.trim() : "";
+          const sourceReportId =
+            typeof body.source_report_id === "number" && Number.isFinite(body.source_report_id)
+              ? Math.trunc(body.source_report_id)
+              : null;
+          if (!action) {
+            sendError(res, 400, "INVALID_ARGUMENT", "action is required");
+            return;
+          }
+          const beforeIds = new Set(db.listTomorrowPlanItems().map((row) => row.id));
+          const item = db.appendTomorrowPlanItem(action, sourceReportId);
+          const deduped = beforeIds.has(item.id);
+          sendJson(res, 200, { item, deduped });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to append tomorrow plan";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/insights/tomorrow-plan" && method === "GET") {
+        try {
+          const params = getQueryParams(url);
+          const limit = Math.min(20, Math.max(1, parseIntSafe(params.get("limit"), 3)));
+          const items = db.listTomorrowPlanItems()
+            .sort((a, b) => b.created_at - a.created_at)
+            .slice(0, limit);
+          sendJson(res, 200, { items });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to load tomorrow plan";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      const tomorrowPlanItemMatch = path.match(/^\/api\/insights\/tomorrow-plan\/([^/]+)$/);
+      if (tomorrowPlanItemMatch && method === "PUT") {
+        try {
+          const body = await readJsonBody(req);
+          const id = decodeURIComponent(tomorrowPlanItemMatch[1] ?? "").trim();
+          const status = body.status === "done" ? "done" : body.status === "open" ? "open" : null;
+          if (!id || !status) {
+            sendError(res, 400, "INVALID_ARGUMENT", "id and status(open|done) are required");
+            return;
+          }
+          const item = db.updateTomorrowPlanItemStatus(id, status);
+          if (!item) {
+            sendError(res, 404, "NOT_FOUND", "Tomorrow plan item not found");
+            return;
+          }
+          sendJson(res, 200, { item });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to update tomorrow plan";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (tomorrowPlanItemMatch && method === "DELETE") {
+        try {
+          const id = decodeURIComponent(tomorrowPlanItemMatch[1] ?? "").trim();
+          if (!id) {
+            sendError(res, 400, "INVALID_ARGUMENT", "id is required");
+            return;
+          }
+          const removed = db.removeTomorrowPlanItem(id);
+          if (!removed) {
+            sendError(res, 404, "NOT_FOUND", "Tomorrow plan item not found");
+            return;
+          }
+          sendJson(res, 200, { ok: true });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to delete tomorrow plan";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
         }
         return;
       }
@@ -473,7 +572,7 @@ export function createHandler() {
         return;
       }
 
-      if (path === "/settings") {
+      if (path === "/settings" || path === "/advanced") {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(getSettingsPage());
         return;

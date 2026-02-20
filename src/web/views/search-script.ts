@@ -9,6 +9,7 @@ export const searchPageScript = `
     var batchSize = 50;
     var isLoadingMore = false;
     var hasMoreSessions = true;
+    var syncSources = [];
     var sourceLabels = {
       cursor: "Cursor IDE", copilot: "Copilot", "cursor-cli": "Cursor CLI",
       "claude-code": "Claude Code", codex: "Codex", gemini: "Gemini"
@@ -20,6 +21,24 @@ export const searchPageScript = `
       el.classList.add("show");
       clearTimeout(el._timer);
       el._timer = setTimeout(function () { el.classList.remove("show"); }, 2000);
+    }
+
+    function parseApiError(payload) {
+      if (!payload) return "Request failed";
+      if (typeof payload.error === "string") return payload.error;
+      if (payload.error && typeof payload.error.message === "string") return payload.error.message;
+      return "Request failed";
+    }
+
+    function fetchJson(path, options) {
+      return fetch(path, options || {}).then(function (res) {
+        return res.text().then(function (text) {
+          var payload = {};
+          try { payload = text ? JSON.parse(text) : {}; } catch (_e) {}
+          if (!res.ok) throw new Error(parseApiError(payload));
+          return payload;
+        });
+      });
     }
 
     function copyToClipboard(text, label) {
@@ -142,7 +161,7 @@ export const searchPageScript = `
       selectedMessages = [];
       var html = '<div class="empty-state"><p>' + escapeHtml(text) + '</p>';
       if (showGuide) {
-        html += '<p class="guidance">Click <strong>Index Now</strong> to scan AI chat history, or run <code>npx assistmem index</code></p>';
+        html += '<p class="guidance">Click <strong>Sync Local Chats</strong> to scan AI chat history, or run <code>npx assistmem index</code></p>';
       }
       html += '</div>';
       document.getElementById("messages").innerHTML = html;
@@ -242,6 +261,95 @@ export const searchPageScript = `
         });
     }
 
+    function syncEnabledSourcesFromSidebar() {
+      var btn = document.getElementById("btn-index-now");
+      var inlineBtn = document.getElementById("btn-sync-inline");
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = "Syncing...";
+      if (inlineBtn) {
+        inlineBtn.disabled = true;
+        inlineBtn.textContent = "Syncing...";
+      }
+      fetchJson("/api/settings/sources")
+        .then(function (settingsPayload) {
+          var summary = settingsPayload && settingsPayload.summary ? settingsPayload.summary : {};
+          var activeSources = Number(summary.active_sources || 0);
+          if (activeSources <= 0) {
+            showToast("No AI tool is enabled. Redirecting to Advanced...");
+            setTimeout(function () {
+              window.location.href = "/advanced";
+            }, 700);
+            return null;
+          }
+          return fetchJson("/api/index", { method: "POST" });
+        })
+        .then(function (payload) {
+          if (!payload) return;
+          showToast("Synced " + String(payload.sessions || 0) + " sessions / " + String(payload.messages || 0) + " messages");
+          loadSyncOptions();
+          loadSessions();
+        })
+        .catch(function (err) {
+          showToast((err && err.message) ? err.message : "Sync failed");
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = "Sync Local Chats";
+          if (inlineBtn) {
+            inlineBtn.disabled = false;
+            inlineBtn.textContent = "Sync Enabled Now";
+          }
+        });
+    }
+
+    function renderSyncOptions() {
+      var host = document.getElementById("sync-options-list");
+      var statusEl = document.getElementById("sync-options-status");
+      if (!host) return;
+      if (!syncSources.length) {
+        host.innerHTML = '<div class="sync-source-meta">No source configuration found.</div>';
+        if (statusEl) statusEl.textContent = "No source configuration found.";
+        return;
+      }
+      var enabledCount = syncSources.filter(function (s) { return !!s.enabled; }).length;
+      var lastSyncAt = syncSources.reduce(function (maxTs, s) {
+        var ts = Number(s.last_sync_at || 0);
+        return ts > maxTs ? ts : maxTs;
+      }, 0);
+      if (statusEl) {
+        statusEl.textContent =
+          "Enabled " + String(enabledCount) + "/" + String(syncSources.length) +
+          " · " + (lastSyncAt > 0 ? ("Last sync " + timeAgo(lastSyncAt)) : "Not synced yet");
+      }
+      host.innerHTML = syncSources.map(function (s) {
+        var source = String(s.source || "");
+        var checked = s.enabled ? " checked" : "";
+        var label = sourceLabels[source] || source || "?";
+        var meta = s.last_sync_at ? ("Last sync: " + timeAgo(s.last_sync_at)) : "Not synced yet";
+        return '<label class="sync-source-row">' +
+          '<div class="sync-source-main">' +
+            '<div class="sync-source-name">' + escapeHtml(label) + '</div>' +
+            '<div class="sync-source-meta">' + escapeHtml(meta) + '</div>' +
+          '</div>' +
+          '<input class="sync-source-toggle" type="checkbox" data-source="' + escapeHtml(source) + '"' + checked + ' />' +
+        '</label>';
+      }).join("");
+    }
+
+    function loadSyncOptions() {
+      return fetchJson("/api/settings/sources")
+        .then(function (payload) {
+          syncSources = (payload && Array.isArray(payload.sources)) ? payload.sources : [];
+          renderSyncOptions();
+        })
+        .catch(function () {
+          syncSources = [];
+          renderSyncOptions();
+          showToast("Failed to load sync options");
+        });
+    }
+
     function loadSessions() {
       showSessionSkeleton();
       loadedOffset = 0;
@@ -264,7 +372,7 @@ export const searchPageScript = `
           hasMoreSessions = list.length >= batchSize;
           focusedIndex = -1;
           if (!list.length) {
-            document.getElementById("session-list").innerHTML = '<div class="empty-state"><p>No sessions found.</p><p class="guidance">Click <strong>Index Now</strong> to scan chat history.</p></div>';
+            document.getElementById("session-list").innerHTML = '<div class="empty-state"><p>No sessions found.</p><p class="guidance">Click <strong>Sync Local Chats</strong> to scan chat history.</p></div>';
             selectedSession = null;
             setSessionHeader(null);
             setMessagePanelEmpty("No sessions found.", true);
@@ -423,7 +531,60 @@ export const searchPageScript = `
     });
 
     document.getElementById("btn-settings").addEventListener("click", function () {
-      window.location.href = "/settings";
+      window.location.href = "/advanced";
+    });
+
+    document.getElementById("btn-index-now").addEventListener("click", function () {
+      syncEnabledSourcesFromSidebar();
+    });
+
+    document.getElementById("btn-sync-inline").addEventListener("click", function () {
+      syncEnabledSourcesFromSidebar();
+    });
+
+    document.getElementById("btn-sync-options").addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var panel = document.getElementById("sync-options-panel");
+      var expanded = this.getAttribute("aria-expanded") === "true";
+      if (expanded) {
+        panel.classList.add("hidden");
+        this.setAttribute("aria-expanded", "false");
+        return;
+      }
+      this.setAttribute("aria-expanded", "true");
+      panel.classList.remove("hidden");
+      loadSyncOptions();
+    });
+
+    document.getElementById("sync-options-panel").addEventListener("change", function (e) {
+      var toggle = e.target.closest(".sync-source-toggle");
+      if (!toggle) return;
+      var source = toggle.getAttribute("data-source") || "";
+      var checked = !!toggle.checked;
+      fetchJson("/api/settings/sources/" + encodeURIComponent(source), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: checked }),
+      })
+        .then(function () {
+          showToast((sourceLabels[source] || source) + (checked ? " enabled" : " disabled"));
+          return loadSyncOptions();
+        })
+        .catch(function (err) {
+          toggle.checked = !checked;
+          showToast((err && err.message) ? err.message : "Failed to update source");
+        });
+    });
+
+    document.addEventListener("click", function (e) {
+      var panel = document.getElementById("sync-options-panel");
+      var btn = document.getElementById("btn-sync-options");
+      if (!panel || !btn) return;
+      if (panel.classList.contains("hidden")) return;
+      if (panel.contains(e.target) || btn.contains(e.target)) return;
+      panel.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
     });
 
     document.getElementById("analyze-session").addEventListener("click", function (e) {

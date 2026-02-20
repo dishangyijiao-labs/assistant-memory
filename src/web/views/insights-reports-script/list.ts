@@ -1,4 +1,30 @@
 export const insightsReportsScriptList = `
+    var MIN_INSIGHT_TOTAL_MESSAGES = 10;
+    var MIN_INSIGHT_USER_MESSAGES = 5;
+    function renderTomorrowPlan(items) {
+      var list = Array.isArray(items) ? items : [];
+      if (!list.length) {
+        return '<div class="plan-empty">No items yet. Add action items from report details.</div>';
+      }
+      return list.map(function(item) {
+        var done = item.status === "done";
+        var cls = "plan-item" + (done ? " done" : "");
+        var reportLink = item.source_report_id
+          ? '<a class="plan-link" href="/insights/' + encodeURIComponent(String(item.source_report_id)) + '">View source report</a>'
+          : "";
+        return '<div class="' + cls + '" data-plan-id="' + escapeHtml(item.id || "") + '">' +
+          '<div class="plan-main">' +
+            '<div class="plan-action">' + escapeHtml(item.action || "") + '</div>' +
+            '<div class="plan-meta">' + escapeHtml(formatTime(item.created_at)) + reportLink + '</div>' +
+          '</div>' +
+          '<div class="plan-actions">' +
+            '<button type="button" class="btn-ghost plan-toggle" data-next-status="' + (done ? "open" : "done") + '">' + (done ? "Reopen" : "Done") + '</button>' +
+            '<button type="button" class="delete-btn plan-delete" title="Delete">🗑</button>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
     function renderReportList(reports) {
       if (!reports.length) {
         return '<div class="empty">No reports yet. Click "New Report" to generate your first insight report.</div>';
@@ -31,9 +57,12 @@ export const insightsReportsScriptList = `
       );
       renderExtra("");
       status("Loading reports...", "warn");
-      api("/api/insights?limit=50")
-        .then(function(data) {
+      Promise.all([api("/api/insights?limit=50"), api("/api/insights/tomorrow-plan?limit=3")])
+        .then(function(res) {
+          var data = res[0] || {};
+          var planData = res[1] || {};
           var summary = data.summary || { total_reports: 0, sessions_analyzed: 0, messages_analyzed: 0 };
+          var planItems = Array.isArray(planData.items) ? planData.items : [];
           var html =
             '<div class="reports-head">' +
               '<div>' +
@@ -41,6 +70,10 @@ export const insightsReportsScriptList = `
                 '<p class="subtitle" style="margin-top:0.4rem;">Select sessions, generate targeted insights reports, and review your history.</p>' +
               '</div>' +
               '<button id="btn-new-report" class="btn-primary" type="button">＋ New Report</button>' +
+            '</div>' +
+            '<div class="plan-panel">' +
+              '<div class="plan-head"><h3>Tomorrow Plan</h3><span class="plan-count">' + formatNumber(planItems.length) + ' item(s)</span></div>' +
+              renderTomorrowPlan(planItems) +
             '</div>' +
             '<div class="summary-grid">' +
               '<div class="summary-card"><div class="summary-value">' + formatNumber(summary.total_reports || 0) + '</div><div class="summary-label">Total Reports</div></div>' +
@@ -170,8 +203,20 @@ export const insightsReportsScriptList = `
     function generateFromSelected() {
       var ids = Array.from(insightState.selected);
       if (!ids.length) return;
+      var selectedRows = (insightState.candidates || []).filter(function(item) { return insightState.selected.has(item.id); });
+      var estimatedTotalMessages = selectedRows.reduce(function(sum, item) { return sum + Number(item.message_count || 0); }, 0);
+      var estimatedUserMessages = Math.floor(estimatedTotalMessages / 2);
+      if (estimatedTotalMessages < MIN_INSIGHT_TOTAL_MESSAGES || estimatedUserMessages < MIN_INSIGHT_USER_MESSAGES) {
+        status(
+          "Sample too small for reliable insights. Need at least " +
+            MIN_INSIGHT_TOTAL_MESSAGES + " total messages and " +
+            MIN_INSIGHT_USER_MESSAGES + " user messages (estimated).",
+          "err"
+        );
+        return;
+      }
       if (!isModelReadyForGeneration()) {
-        status("External model API key is missing. Configure Model Settings before generating.", "err");
+        status("External model API key is missing. Configure it in the panel above before generating.", "err");
         var apiKeyInput = document.getElementById("model-api-key");
         if (apiKeyInput && apiKeyInput.focus) apiKeyInput.focus();
         return;
@@ -192,7 +237,9 @@ export const insightsReportsScriptList = `
           openRoute("/insights");
         }
       }).catch(function(err) {
-        if (err && err.code === "INSIGHTS_MODEL_NOT_CONFIGURED") {
+        if (err && err.code === "INSIGHTS_SAMPLE_TOO_SMALL") {
+          status(err.message || "Sample too small for reliable insights.", "err");
+        } else if (err && err.code === "INSIGHTS_MODEL_NOT_CONFIGURED") {
           status("Model API not configured. Set an API key or switch to Local Analysis.", "err");
           syncModelHint();
           var keyInput = document.getElementById("model-api-key");

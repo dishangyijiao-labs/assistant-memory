@@ -19,13 +19,6 @@ export const settingsScript = `
       return n.toLocaleString();
     }
 
-    function formatTime(ts) {
-      if (!ts) return "Never";
-      var d = new Date(ts);
-      if (isNaN(d.getTime())) return "Unknown";
-      return d.toLocaleString();
-    }
-
     function timeAgo(ts) {
       if (!ts) return "never";
       var delta = Date.now() - ts;
@@ -62,12 +55,7 @@ export const settingsScript = `
 
     function renderSummary(payload) {
       var summary = payload && payload.summary ? payload.summary : {};
-      document.getElementById("summary-active").textContent = formatNumber(summary.active_sources || 0);
-      document.getElementById("summary-sessions").textContent = formatNumber(summary.total_sessions || 0);
-      document.getElementById("summary-messages").textContent = formatNumber(summary.total_messages || 0);
-      document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.db_path || "-");
-      document.getElementById("storage-db-stats").textContent =
-        "Sessions: " + formatNumber(summary.total_sessions || 0) + " · Messages: " + formatNumber(summary.total_messages || 0);
+      document.getElementById("active-count").textContent = formatNumber(summary.active_sources || 0) + " enabled";
     }
 
     function renderModeOptions(selected) {
@@ -100,7 +88,6 @@ export const settingsScript = `
               '<div>' +
                 '<div class="source-title-row"><span class="source-title">' + escapeHtml(label) + '</span><span class="source-kind">' + escapeHtml(kind) + '</span></div>' +
                 '<div class="source-path">' + escapeHtml(safeText(s.path || "")) + '</div>' +
-                '<div class="source-desc">' + escapeHtml(safeText(s.description || "")) + '</div>' +
               '</div>' +
             '</div>' +
             '<label class="switch">' +
@@ -111,12 +98,10 @@ export const settingsScript = `
           '<div class="source-meta">' +
             '<span>' + formatNumber(s.session_count || 0) + ' sessions</span>' +
             '<span>' + formatNumber(s.message_count || 0) + ' messages</span>' +
-            '<span>Last activity: ' + escapeHtml(timeAgo(s.last_activity_at)) + '</span>' +
-            '<span>Last sync: ' + escapeHtml(timeAgo(s.last_sync_at)) + '</span>' +
+            '<span>Last active: ' + escapeHtml(timeAgo(s.last_activity_at)) + '</span>' +
           '</div>' +
           '<div class="source-actions">' +
-            '<button type="button" class="btn sync-now">Sync Now</button>' +
-            '<button type="button" class="btn configure-source">Configure</button>' +
+            '<button type="button" class="btn configure-source">Edit</button>' +
           '</div>' +
           '<div class="source-config hidden">' +
             '<select class="source-mode">' + renderModeOptions(safeText(s.mode)) + '</select>' +
@@ -148,14 +133,6 @@ export const settingsScript = `
       });
     }
 
-    function syncSource(source) {
-      return api("/api/settings/sources/" + encodeURIComponent(source) + "/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-    }
-
     function loadSourceSettings() {
       setStatus("Loading source settings...", "warn");
       return api("/api/settings/sources")
@@ -178,43 +155,11 @@ export const settingsScript = `
         .then(function (payload) {
           var settings = payload && payload.settings ? payload.settings : {};
           var enabled = !!settings.external_enabled;
-          document.getElementById("privacy-model-status").textContent =
+          document.getElementById("insights-api-status").textContent =
             "External API: " + (enabled ? "Enabled" : "Disabled");
         })
         .catch(function () {
-          document.getElementById("privacy-model-status").textContent = "External API: unavailable";
-        });
-    }
-
-    function refreshStorageStats() {
-      return api("/api/stats")
-        .then(function (payload) {
-          document.getElementById("storage-db-path").textContent = "DB path: " + safeText(payload.dbPath || "-");
-          document.getElementById("storage-db-stats").textContent =
-            "Sessions: " + formatNumber(payload.sessions || 0) + " · Messages: " + formatNumber(payload.messages || 0);
-          setStatus("Storage stats refreshed.", "ok");
-        })
-        .catch(function (err) {
-          setStatus(err.message || "Failed to refresh storage stats", "err");
-        });
-    }
-
-    function syncEnabledSources() {
-      setStatus("Syncing enabled sources...", "warn");
-      var btn = document.getElementById("btn-sync-enabled");
-      btn.disabled = true;
-      return api("/api/index", { method: "POST" })
-        .then(function (payload) {
-          document.getElementById("index-sync-meta").textContent =
-            "Indexed " + formatNumber(payload.sessions || 0) + " sessions, " + formatNumber(payload.messages || 0) + " messages.";
-          setStatus("Sync completed.", "ok");
-          return loadSourceSettings();
-        })
-        .catch(function (err) {
-          setStatus(err.message || "Sync failed", "err");
-        })
-        .finally(function () {
-          btn.disabled = false;
+          document.getElementById("insights-api-status").textContent = "External API: unavailable";
         });
     }
 
@@ -239,19 +184,6 @@ export const settingsScript = `
       if (!card) return;
       var source = sourceFromCard(card);
       if (!source) return;
-
-      if (e.target.closest(".sync-now")) {
-        setStatus("Syncing " + source + "...", "warn");
-        syncSource(source)
-          .then(function () {
-            setStatus("Synced " + source + ".", "ok");
-            return loadSourceSettings();
-          })
-          .catch(function (err) {
-            setStatus(err.message || "Sync failed", "err");
-          });
-        return;
-      }
 
       if (e.target.closest(".configure-source")) {
         var cfg = card.querySelector(".source-config");
@@ -283,10 +215,6 @@ export const settingsScript = `
       }
     });
 
-    document.getElementById("btn-sync-enabled").addEventListener("click", function () {
-      void syncEnabledSources();
-    });
-
-    Promise.all([loadSourceSettings(), loadModelStatus(), refreshStorageStats()]).catch(function () {});
+    Promise.all([loadSourceSettings(), loadModelStatus()]).catch(function () {});
   </script>
 `;

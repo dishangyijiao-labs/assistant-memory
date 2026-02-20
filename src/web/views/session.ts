@@ -314,7 +314,7 @@ export default function getSessionPage(): string {
         .catch(function(err) {
           btn.disabled = false;
           btn.textContent = "Analyze quality";
-          var msg = err && err.message ? err.message : "Analysis failed. Ensure Settings → Model is configured.";
+          var msg = err && err.message ? err.message : "Analysis failed. Configure Insights Setup first.";
           var code = err && err.code ? String(err.code) : "";
           var needsApiKeyLink = code === "QUALITY_MODEL_NOT_CONFIGURED" || /api key/i.test(msg);
           if (status) {

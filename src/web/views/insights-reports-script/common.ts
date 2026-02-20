@@ -8,18 +8,12 @@ export const insightsReportsScriptCommon = `
       gemini: "Gemini"
     };
 
-    var sidebarState = {
-      page: 1,
-      pageSize: 10,
-      total: 0,
-      sessions: []
-    };
-
     var insightState = {
       candidates: [],
       selected: new Set(),
       sourceFilter: "all",
-      tab: "at_a_glance"
+      tab: "at_a_glance",
+      currentReport: null
     };
 
     var modelState = {
@@ -118,50 +112,4 @@ export const insightsReportsScriptCommon = `
       document.getElementById("insights-root").innerHTML = html;
     }
 
-    function sidebarSessionTitle(s) {
-      if (s.preview) {
-        var preview = safeText(s.preview.trim());
-        if (preview.length > 60) {
-          return preview.substring(0, 60) + "…";
-        }
-        return preview;
-      }
-      var w = safeText(s.workspace || "");
-      if (w) {
-        var normalized = w.replace(/\\\\/g, "/").split("/").filter(Boolean);
-        if (normalized.length > 0) return normalized[normalized.length - 1];
-      }
-      var eid = safeText(s.external_id || "");
-      return eid ? eid.slice(0, 42) : ("Session " + s.id);
-    }
-
-    function loadSidebarSessions() {
-      var offset = (sidebarState.page - 1) * sidebarState.pageSize;
-      var query = "limit=" + sidebarState.pageSize + "&offset=" + offset;
-      return api("/api/sessions?" + query)
-        .then(function(data) {
-          sidebarState.sessions = data.sessions || [];
-          sidebarState.total = typeof data.total === "number" ? data.total : sidebarState.sessions.length;
-          var host = document.getElementById("sb-sessions");
-          if (!sidebarState.sessions.length) {
-            host.innerHTML = '<div class="empty">No sessions</div>';
-          } else {
-            host.innerHTML = sidebarState.sessions.map(function(s) {
-              var label = sourceLabels[s.source] || s.source || "?";
-              return '<div class="session-item">' +
-                '<div class="session-item-title">' + escapeHtml(sidebarSessionTitle(s)) + '</div>' +
-                '<div class="session-item-meta"><span class="source-badge">' + escapeHtml(label) + '</span><span class="session-time">' + escapeHtml(timeAgo(s.last_at)) + '</span></div>' +
-              '</div>';
-            }).join("");
-          }
-          var pageCount = Math.max(1, Math.ceil(sidebarState.total / sidebarState.pageSize));
-          if (sidebarState.page > pageCount) sidebarState.page = pageCount;
-          document.getElementById("sb-page").textContent = "Page " + sidebarState.page;
-          document.getElementById("sb-prev").disabled = sidebarState.page <= 1;
-          document.getElementById("sb-next").disabled = sidebarState.page >= pageCount;
-        })
-        .catch(function(err) {
-          status(err.message || "Failed to load sessions", "err");
-        });
-    }
 `;

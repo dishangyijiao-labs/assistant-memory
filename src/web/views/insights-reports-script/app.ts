@@ -1,18 +1,5 @@
 export const insightsReportsScriptApp = `
     function wireGlobalEvents() {
-      document.getElementById("sb-prev").addEventListener("click", function() {
-        if (sidebarState.page <= 1) return;
-        sidebarState.page -= 1;
-        void loadSidebarSessions();
-      });
-      document.getElementById("sb-next").addEventListener("click", function() {
-        sidebarState.page += 1;
-        void loadSidebarSessions();
-      });
-      document.getElementById("sb-settings").addEventListener("click", function() {
-        openRoute("/settings");
-      });
-
       document.body.addEventListener("change", function(e) {
         if (!e || !e.target) return;
         if (e.target.id === "model-mode") {
@@ -55,6 +42,48 @@ export const insightsReportsScriptApp = `
           if (!cardDelete) return;
           var idDelete = parseInt(cardDelete.getAttribute("data-report-id") || "0", 10);
           if (idDelete > 0) removeReport(idDelete);
+          return;
+        }
+        var planToggleBtn = e.target.closest(".plan-toggle");
+        if (planToggleBtn) {
+          var planItem = planToggleBtn.closest(".plan-item[data-plan-id]");
+          if (!planItem) return;
+          var planId = planItem.getAttribute("data-plan-id") || "";
+          var nextStatus = planToggleBtn.getAttribute("data-next-status") === "open" ? "open" : "done";
+          if (!planId) return;
+          planToggleBtn.disabled = true;
+          api("/api/insights/tomorrow-plan/" + encodeURIComponent(planId), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: nextStatus }),
+          }).then(function() {
+            status("Tomorrow plan updated.", "ok");
+            renderListPage();
+          }).catch(function(err) {
+            status(err.message || "Failed to update tomorrow plan", "err");
+          }).finally(function() {
+            planToggleBtn.disabled = false;
+          });
+          return;
+        }
+        var planDeleteBtn = e.target.closest(".plan-delete");
+        if (planDeleteBtn) {
+          var planItemDelete = planDeleteBtn.closest(".plan-item[data-plan-id]");
+          if (!planItemDelete) return;
+          var planIdDelete = planItemDelete.getAttribute("data-plan-id") || "";
+          if (!planIdDelete) return;
+          if (!window.confirm("Delete this tomorrow plan item?")) return;
+          planDeleteBtn.disabled = true;
+          api("/api/insights/tomorrow-plan/" + encodeURIComponent(planIdDelete), {
+            method: "DELETE",
+          }).then(function() {
+            status("Tomorrow plan item deleted.", "ok");
+            renderListPage();
+          }).catch(function(err) {
+            status(err.message || "Failed to delete tomorrow plan item", "err");
+          }).finally(function() {
+            planDeleteBtn.disabled = false;
+          });
           return;
         }
         var sourceTab = e.target.closest(".source-tab[data-source]");
@@ -101,6 +130,32 @@ export const insightsReportsScriptApp = `
           generateFromSelected();
           return;
         }
+        var addTomorrowBtn = e.target.closest("#btn-add-tomorrow");
+        if (addTomorrowBtn) {
+          var action = safeText(addTomorrowBtn.getAttribute("data-action") || "").trim();
+          var reportId = parseInt(addTomorrowBtn.getAttribute("data-report-id") || "0", 10) || null;
+          if (!action) {
+            status("Missing action text.", "err");
+            return;
+          }
+          addTomorrowBtn.disabled = true;
+          api("/api/insights/tomorrow-plan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: action, source_report_id: reportId }),
+          }).then(function(out) {
+            if (out && out.deduped) {
+              status("Already in tomorrow plan.", "ok");
+            } else {
+              status("Added to tomorrow plan.", "ok");
+            }
+          }).catch(function(err) {
+            status(err.message || "Failed to add tomorrow plan", "err");
+          }).finally(function() {
+            addTomorrowBtn.disabled = false;
+          });
+          return;
+        }
         var tab = e.target.closest(".tab[data-tab]");
         if (tab) {
           var route = getRouteInfo();
@@ -142,7 +197,5 @@ export const insightsReportsScriptApp = `
     }
 
     wireGlobalEvents();
-    loadSidebarSessions().then(function() {
-      renderRoute();
-    });
+    renderRoute();
 `;

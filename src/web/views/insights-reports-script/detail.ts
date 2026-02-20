@@ -1,6 +1,65 @@
 export const insightsReportsScriptDetail = `
-    function renderAtGlance(details) {
+    function firstSentence(text) {
+      var s = safeText(text).trim();
+      if (!s) return "";
+      var idx = s.search(/[。.!?;；]/);
+      return idx > 0 ? s.slice(0, idx + 1) : s;
+    }
+
+    function scoreLevel(report) {
+      var scores = report && report.scores ? report.scores : {};
+      var eff = Number(scores.efficiency || 0);
+      var sta = Number(scores.stability || 0);
+      var dec = Number(scores.decision_clarity || 0);
+      var avg = (eff + sta + dec) / 3;
+      if (avg >= 80) return { label: "Positive", cls: "decision-positive", avg: avg };
+      if (avg >= 65) return { label: "Neutral", cls: "decision-neutral", avg: avg };
+      return { label: "Negative", cls: "decision-negative", avg: avg };
+    }
+
+    function confidenceLevel(report) {
+      var messages = Number((report && report.message_count) || 0);
+      var sessions = Number((report && report.session_count) || 0);
+      if (messages >= 120 && sessions >= 8) return { label: "High", cls: "confidence-high" };
+      if (messages >= 40 && sessions >= 3) return { label: "Medium", cls: "confidence-medium" };
+      return { label: "Low", cls: "confidence-low" };
+    }
+
+    function sampleWarning(report) {
+      var messages = Number((report && report.message_count) || 0);
+      var sessions = Number((report && report.session_count) || 0);
+      return messages < 20 || sessions < 3;
+    }
+
+    function renderAtGlance(report, details) {
       var ag = details.at_a_glance || {};
+      var level = scoreLevel(report);
+      var confidence = confidenceLevel(report);
+      var lowSample = sampleWarning(report);
+      var impressive = details.impressive_things || {};
+      var wrong = details.where_things_go_wrong || {};
+      var impressiveItems = Array.isArray(impressive.items) ? impressive.items : [];
+      var wrongItems = Array.isArray(wrong.items) ? wrong.items : [];
+      var positives = [
+        firstSentence(ag.working && ag.working.body),
+        firstSentence(impressiveItems[0] && impressiveItems[0].body),
+      ].filter(Boolean).slice(0, 2);
+      var negatives = [
+        firstSentence(ag.hindering && ag.hindering.body),
+        firstSentence(wrongItems[0] && wrongItems[0].body),
+      ].filter(Boolean).slice(0, 2);
+      var nextAction = firstSentence(ag.quick_wins && ag.quick_wins.body) || "Narrow one session to one objective and add explicit done criteria.";
+
+      var scores = report && report.scores ? report.scores : {};
+      var weakest = [
+        { key: "Efficiency", value: Number(scores.efficiency || 0) },
+        { key: "Stability", value: Number(scores.stability || 0) },
+        { key: "Decision Clarity", value: Number(scores.decision_clarity || 0) },
+      ].sort(function(a, b) { return a.value - b.value; })[0];
+      var targetLine = weakest
+        ? "Target: improve " + weakest.key + " from " + weakest.value + " to " + (weakest.value + 5) + " next cycle."
+        : "Target: improve one core score by +5 next cycle.";
+
       function cardHtml(card, cls) {
         if (!card) return "";
         return '<div class="section-card ' + cls + '">' +
@@ -9,10 +68,49 @@ export const insightsReportsScriptDetail = `
           '<p style="margin-top:0.45rem;"><a href="javascript:void(0)">' + escapeHtml(card.cta || "") + "  ›</a></p>" +
         '</div>';
       }
-      return cardHtml(ag.working, "callout-green") +
-        cardHtml(ag.hindering, "callout-amber") +
-        cardHtml(ag.quick_wins, "callout-blue") +
-        cardHtml(ag.ambitious, "callout-dark");
+      var summaryHtml =
+        '<div class="decision-strip">' +
+          '<div class="decision-main">' +
+            '<div class="decision-label">Overall</div>' +
+            '<div class="decision-value ' + level.cls + '">' + escapeHtml(level.label) + '</div>' +
+          '</div>' +
+          '<div class="decision-metric">' +
+            '<div class="decision-label">Average Score</div>' +
+            '<div class="decision-value">' + escapeHtml(level.avg.toFixed(1)) + '</div>' +
+          '</div>' +
+          '<div class="decision-metric">' +
+            '<div class="decision-label">Confidence</div>' +
+            '<div class="decision-value ' + confidence.cls + '">' + escapeHtml(confidence.label) + '</div>' +
+          '</div>' +
+        '</div>';
+
+      var lowSampleHtml = lowSample
+        ? '<div class="sample-warning">Low sample size: this report is directional only. Increase sessions/messages before making strategic decisions.</div>'
+        : "";
+
+      var positiveHtml = positives.length
+        ? positives.map(function(x) { return "<li>" + escapeHtml(x) + "</li>"; }).join("")
+        : "<li>No strong positive signal yet.</li>";
+      var negativeHtml = negatives.length
+        ? negatives.map(function(x) { return "<li>" + escapeHtml(x) + "</li>"; }).join("")
+        : "<li>No critical risk detected.</li>";
+
+      var reportId = Number((report && report.id) || 0);
+      return summaryHtml +
+        lowSampleHtml +
+        '<div class="feedback-grid">' +
+          '<div class="section-card callout-green"><h3>Positive Feedback</h3><ul class="mini-list">' + positiveHtml + "</ul></div>" +
+          '<div class="section-card callout-amber"><h3>Negative Feedback</h3><ul class="mini-list">' + negativeHtml + "</ul></div>" +
+        "</div>" +
+        '<div class="section-card callout-blue"><h3>Next Action (P1)</h3><p>' + escapeHtml(nextAction) + '</p><p><strong>' + escapeHtml(targetLine) + '</strong></p>' +
+          '<div class="action-row"><button type="button" class="btn-ghost" id="btn-add-tomorrow" data-action="' + escapeHtml(nextAction) + '" data-report-id="' + escapeHtml(String(reportId)) + '">Add to tomorrow plan</button></div>' +
+        "</div>" +
+        '<details class="detail-more"><summary>Full narrative cards</summary>' +
+          cardHtml(ag.working, "callout-green") +
+          cardHtml(ag.hindering, "callout-amber") +
+          cardHtml(ag.quick_wins, "callout-blue") +
+          cardHtml(ag.ambitious, "callout-dark") +
+        "</details>";
     }
 
     function renderWhatYouWorkOn(details) {
@@ -144,7 +242,7 @@ export const insightsReportsScriptDetail = `
     }
 
     function renderDetailTab(tab, details) {
-      if (tab === "at_a_glance") return renderAtGlance(details);
+      if (tab === "at_a_glance") return renderAtGlance(insightState.currentReport || {}, details);
       if (tab === "what_you_work_on") return renderWhatYouWorkOn(details);
       if (tab === "how_you_use_ai") return renderHowYouUseAI(details);
       if (tab === "impressive_things") return renderImpressive(details);
@@ -158,6 +256,7 @@ export const insightsReportsScriptDetail = `
       api("/api/insights/" + reportId)
         .then(function(data) {
           var report = data.report || {};
+          insightState.currentReport = report;
           var details = report.details || {};
           var title = safeText(report.title || "Insight Report");
           renderTop(

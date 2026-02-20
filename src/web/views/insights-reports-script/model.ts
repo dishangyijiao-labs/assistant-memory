@@ -75,7 +75,7 @@ export const insightsReportsScriptModel = `
           '<div class="model-actions">' +
             '<button id="btn-save-model" class="btn-ghost" type="button">Save Settings</button>' +
             '<button id="btn-test-model" class="btn-ghost" type="button">Test Connection</button>' +
-            '<a href="/settings" class="btn-ghost" style="text-decoration:none;">Advanced Settings</a>' +
+            '<a href="/advanced" class="btn-ghost" style="text-decoration:none;">Advanced</a>' +
           '</div>' +
         '</div>' +
         '<p class="model-note">API key is stored locally on this machine for persistence. For production, env-based key management is still recommended.</p>' +

@@ -14,8 +14,6 @@ export const searchPageStyles = `
       --assistant-bg: #ffffff;
       --code-bg: #1e293b;
       --code-text: #e2e8f0;
-      --index-bg: #f97316;
-      --index-hover: #ea580c;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; }
@@ -59,6 +57,110 @@ export const searchPageStyles = `
       position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%);
       width: 14px; height: 14px; color: var(--muted); pointer-events: none;
     }
+    .sync-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+    }
+    .btn-index-now {
+      flex: 1;
+      padding: 0.42rem 0.65rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: #1d4ed8;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.12s;
+    }
+    .btn-index-now:hover { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+    .btn-index-now:disabled { background: var(--surface); border-color: var(--border); color: var(--muted); opacity: 0.85; cursor: wait; }
+    .btn-sync-options {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s, background 0.12s;
+    }
+    .btn-sync-options:hover {
+      border-color: #93c5fd;
+      color: #1e40af;
+      background: #eef2ff;
+    }
+    .btn-sync-options svg { width: 15px; height: 15px; }
+    .sync-options-panel {
+      margin-top: 0.45rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.55rem;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+    }
+    .sync-options-title {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .sync-options-status {
+      margin-bottom: 0.45rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 0.32rem 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      line-height: 1.35;
+    }
+    .sync-options-list { display: flex; flex-direction: column; gap: 0.35rem; }
+    .sync-source-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.3rem 0.35rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .sync-source-main { min-width: 0; }
+    .sync-source-name { font-size: 0.77rem; color: var(--text); font-weight: 600; }
+    .sync-source-meta { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sync-source-toggle { width: 14px; height: 14px; cursor: pointer; }
+    .sync-options-link {
+      margin-top: 0.5rem;
+      display: inline-block;
+      font-size: 0.74rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .sync-options-link:hover { text-decoration: underline; }
+    .btn-sync-inline {
+      margin-top: 0.5rem;
+      width: 100%;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 8px;
+      padding: 0.38rem 0.55rem;
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-sync-inline:hover { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+    .btn-sync-inline:disabled { background: var(--surface); border-color: var(--border); color: var(--muted); cursor: wait; }
 
     /* Session list */
     .session-list { flex: 1; overflow-y: auto; min-height: 0; }
