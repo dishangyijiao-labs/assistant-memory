@@ -191,8 +191,17 @@ export const searchPageStyles = `
     /* Sidebar footer */
     .sidebar-foot {
       padding: 0.65rem 1rem; border-top: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: flex-start;
+      display: flex; align-items: center; justify-content: space-between;
     }
+    .btn-insights {
+      background: none; border: none; color: var(--accent); cursor: pointer;
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem;
+      font: inherit; font-size: 0.85rem; font-weight: 600;
+      text-decoration: none; border-radius: 6px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .btn-insights:hover { background: var(--accent-soft); color: var(--accent-hover); }
+    .btn-insights svg { width: 16px; height: 16px; }
     .btn-settings {
       background: none; border: none; color: var(--muted); cursor: pointer;
       display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem;
