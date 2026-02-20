@@ -1,0 +1,33 @@
+name: Update Repository About
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update-about:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Update repository description and topics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH /repos/${{ github.repository }} \
+            -f description="Local indexer and keyword search for chat history from Cursor IDE, Copilot, Claude Code, Codex, and Gemini CLI. No login." \
+            -f homepage="https://github.com/dishangyijiao/assistmem"
+
+          gh api --method PUT /repos/${{ github.repository }}/topics \
+            -f "names[]=cursor" \
+            -f "names[]=copilot" \
+            -f "names[]=claude-code" \
+            -f "names[]=codex" \
+            -f "names[]=gemini" \
+            -f "names[]=chat-history" \
+            -f "names[]=full-text-search" \
+            -f "names[]=sqlite" \
+            -f "names[]=tauri" \
+            -H "Accept: application/vnd.github.mercy-preview+json"
