@@ -7,20 +7,17 @@ export default function getSearchPage(): string {
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <h1>AssistMem</h1>
-      </div>
       <div class="sidebar-filters">
         <form id="search-form" class="search-wrap" role="search">
           <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
           </svg>
-          <input type="search" id="q" name="q" placeholder="Search..." />
+          <input type="search" id="q" name="q" placeholder="Search sessions..." />
         </form>
-        <div class="sync-actions">
+        <div class="sync-btn-group">
           <button type="button" class="btn-index-now" id="btn-index-now">Sync Local Chats</button>
-          <button type="button" class="btn-sync-options" id="btn-sync-options" aria-expanded="false" title="Sync options">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.669.864 8 0 6.331.864l-.25 1.814a5.4 5.4 0 0 0-1.214.703L3.122 2.59 1.944 3.767l.792 1.746a5.4 5.4 0 0 0-.703 1.214l-1.814.25L0 8l.864 1.669 1.814.25c.165.435.4.845.703 1.214l-.792 1.746 1.178 1.177 1.746-.792c.369.303.779.538 1.214.703L6.331 16 8 15.136l.25-1.814a5.4 5.4 0 0 0 1.214-.703l1.746.792 1.177-1.177-.792-1.746c.303-.369.538-.779.703-1.214l1.814-.25L16 8l-.864-1.669-1.814-.25a5.4 5.4 0 0 0-.703-1.214l.792-1.746-1.177-1.178-1.746.792a5.4 5.4 0 0 0-1.214-.703zM8 5.25A2.75 2.75 0 1 1 8 10.75 2.75 2.75 0 0 1 8 5.25"/></svg>
+          <button type="button" class="btn-sync-options" id="btn-sync-options" aria-expanded="false" title="Select sync sources">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
           </button>
         </div>
         <div class="sync-options-panel hidden" id="sync-options-panel">
