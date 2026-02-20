@@ -8,6 +8,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  update-about:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update repository About
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pkg = require('./package.json');
+            await github.rest.repos.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              description: pkg.description || '',
+              topics: pkg.keywords || []
+            });
+
   create-release:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -59,11 +80,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AssistMem-macOS-aarch64
-          path: src-tauri/target/release/bundle/dmg/*.dmg
+          path: src-tauri/target/release/bundle/macos/*.dmg
 
       - name: Attach DMG to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/bundle/dmg/*.dmg
+          files: src-tauri/target/release/bundle/macos/*.dmg
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}

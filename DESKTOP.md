@@ -48,7 +48,9 @@ npm run mac:release
 ```
 
 - **Target**: `aarch64-apple-darwin` (Apple Silicon only)
-- **CI**: Pushing to `main` on GitHub triggers a build; the DMG is available as an artifact in the [Actions](https://github.com/dishangyijiao/assistmem/actions) tab.
+- **CI** (see [Actions](https://github.com/dishangyijiao/assistmem/actions)):
+  - **Push to main**: Builds DMG (artifact) and syncs repo About (description, topics) from `package.json`.
+  - **Push tag `v*`** (e.g. `v0.1.0-beta.1`): Creates a GitHub Release with DMG attached. Use `beta`/`alpha`/`rc` in the tag for prerelease.
 - **Output**: `src-tauri/target/release/bundle/macos/`
   - `AssistMem.app` — Run directly or distribute
   - `AssistMem_0.1.0-beta.1_aarch64.dmg` — Installer; user drags app to Applications
