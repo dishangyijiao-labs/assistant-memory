@@ -1,3 +1,4 @@
+use std::fs::OpenOptions;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::{path::PathBuf, time::Duration};
@@ -27,9 +28,12 @@ impl BackendState {
 
 fn resolve_backend_entry(app: &tauri::AppHandle) -> PathBuf {
     if let Ok(resource_dir) = app.path().resource_dir() {
-        let candidate = resource_dir.join("dist").join("index.js");
-        if candidate.exists() {
-            return candidate;
+        // Tauri places bundled resources under Contents/Resources/resources/
+        for sub in ["resources/dist", "dist"] {
+            let candidate = resource_dir.join(sub).join("index.js");
+            if candidate.exists() {
+                return candidate;
+            }
         }
     }
     PathBuf::from("dist").join("index.js")
@@ -62,11 +66,23 @@ fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
         .ok_or_else(|| "backend entry path is not valid UTF-8".to_string())?
         .to_string();
     let node = find_node();
+    let log_path = std::env::var("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .join(".assistmem-backend.log");
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .ok();
+    let stdout_file = log_file
+        .as_ref()
+        .and_then(|f| f.try_clone().ok());
     let mut cmd = Command::new(&node);
     cmd.args([entry_str.as_str(), "serve", "--port", &port])
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(stdout_file.map(Stdio::from).unwrap_or_else(Stdio::null))
+        .stderr(log_file.map(Stdio::from).unwrap_or_else(Stdio::null));
 
     if let Ok(db_path) = std::env::var("ASSISTMEM_DB_PATH")
         .or_else(|_| std::env::var("ASSISTANT_MEMORY_DB_PATH"))
