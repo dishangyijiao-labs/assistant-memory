@@ -35,6 +35,23 @@ fn resolve_backend_entry(app: &tauri::AppHandle) -> PathBuf {
     PathBuf::from("dist").join("index.js")
 }
 
+fn find_node() -> PathBuf {
+    // GUI apps on macOS get a restricted PATH that excludes Homebrew and nvm.
+    // Search known locations before falling back to whatever is on PATH.
+    let candidates = [
+        "/opt/homebrew/bin/node",  // Homebrew (Apple Silicon)
+        "/usr/local/bin/node",     // Homebrew (Intel) / nvm default
+        "/usr/bin/node",           // system (rare on macOS)
+        "/opt/local/bin/node",     // MacPorts
+    ];
+    for path in &candidates {
+        if std::path::Path::new(path).exists() {
+            return PathBuf::from(path);
+        }
+    }
+    PathBuf::from("node") // last resort: rely on PATH
+}
+
 fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
     let port = std::env::var("ASSISTMEM_DESKTOP_PORT")
         .or_else(|_| std::env::var("ASSISTANT_MEMORY_DESKTOP_PORT"))
@@ -44,7 +61,8 @@ fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
         .to_str()
         .ok_or_else(|| "backend entry path is not valid UTF-8".to_string())?
         .to_string();
-    let mut cmd = Command::new("node");
+    let node = find_node();
+    let mut cmd = Command::new(&node);
     cmd.args([entry_str.as_str(), "serve", "--port", &port])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -57,7 +75,7 @@ fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
     }
 
     cmd.spawn()
-        .map_err(|e| format!("failed to start assistmem backend: {e}"))
+        .map_err(|e| format!("failed to start assistmem backend (node={node:?}): {e}"))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
