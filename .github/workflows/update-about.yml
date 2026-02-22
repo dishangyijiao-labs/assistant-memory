@@ -9,25 +9,48 @@ jobs:
   update-about:
     runs-on: ubuntu-latest
     permissions:
-      administration: write
+      contents: read
 
     steps:
       - name: Update repository description and topics
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
         run: |
-          gh api --method PATCH /repos/${{ github.repository }} \
-            -f description="Local indexer and keyword search for chat history from Cursor IDE, Copilot, Claude Code, Codex, and Gemini CLI. No login." \
-            -f homepage="https://github.com/dishangyijiao/assistmem"
+          set -euo pipefail
+          if [ -z "${REPO_ADMIN_TOKEN:-}" ]; then
+            echo "::error::Missing secret REPO_ADMIN_TOKEN. Add a PAT with repository administration access."
+            exit 1
+          fi
 
-          gh api --method PUT /repos/${{ github.repository }}/topics \
-            -f "names[]=cursor" \
-            -f "names[]=copilot" \
-            -f "names[]=claude-code" \
-            -f "names[]=codex" \
-            -f "names[]=gemini" \
-            -f "names[]=chat-history" \
-            -f "names[]=full-text-search" \
-            -f "names[]=sqlite" \
-            -f "names[]=tauri" \
-            -H "Accept: application/vnd.github.mercy-preview+json"
+          repo="${{ github.repository }}"
+          api="https://api.github.com/repos/${repo}"
+          auth_header="Authorization: Bearer ${REPO_ADMIN_TOKEN}"
+          accept_header="Accept: application/vnd.github+json"
+
+          desc_response="$(mktemp)"
+          desc_status="$(curl -sS -o "$desc_response" -w "%{http_code}" \
+            -X PATCH "${api}" \
+            -H "$auth_header" \
+            -H "$accept_header" \
+            -d '{"description":"Local indexer and keyword search for chat history from Cursor IDE, Copilot, Claude Code, Codex, and Gemini CLI. No login.","homepage":"https://github.com/dishangyijiao/assistmem"}')"
+          echo "About update HTTP status: ${desc_status}"
+          cat "$desc_response"
+          echo
+          if [ "$desc_status" -lt 200 ] || [ "$desc_status" -ge 300 ]; then
+            echo "::error::Failed to update repository description/homepage."
+            exit 1
+          fi
+
+          topics_response="$(mktemp)"
+          topics_status="$(curl -sS -o "$topics_response" -w "%{http_code}" \
+            -X PUT "${api}/topics" \
+            -H "$auth_header" \
+            -H "$accept_header" \
+            -d '{"names":["cursor","copilot","claude-code","codex","gemini","chat-history","full-text-search","sqlite","tauri"]}')"
+          echo "Topics update HTTP status: ${topics_status}"
+          cat "$topics_response"
+          echo
+          if [ "$topics_status" -lt 200 ] || [ "$topics_status" -ge 300 ]; then
+            echo "::error::Failed to update repository topics."
+            exit 1
+          fi
