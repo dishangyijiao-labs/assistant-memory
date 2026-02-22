@@ -175,7 +175,25 @@ export const searchPageScript = `
       }
       html += '</div>';
       document.getElementById("messages").innerHTML = html;
-      document.getElementById("copy-session").disabled = true;
+    }
+
+    function getDateKey(ts) {
+      var d = ts ? new Date(ts) : new Date();
+      return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+    }
+
+    function formatDateLabel(ts) {
+      if (!ts) return "Unknown date";
+      var d = new Date(ts);
+      var now = new Date();
+      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var yesterdayStart = todayStart - 86400000;
+      if (ts >= todayStart) return "Today";
+      if (ts >= yesterdayStart) return "Yesterday";
+      try {
+        return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(d);
+      } catch (_e) {}
+      return d.toDateString();
     }
 
     function renderMessages(messages, qualityScores) {
@@ -185,7 +203,14 @@ export const searchPageScript = `
         setMessagePanelEmpty("No messages found in this session.", false);
         return;
       }
-      var html = messages.map(function (m) {
+      var html = "";
+      var lastDateKey = null;
+      messages.forEach(function (m) {
+        var dk = getDateKey(m.timestamp);
+        if (dk !== lastDateKey) {
+          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(m.timestamp)) + '</div>';
+          lastDateKey = dk;
+        }
         var role = (m.role || "assistant").toLowerCase();
         var msgClass = role === "user" ? "msg-user" : role === "assistant" ? "msg-assistant" : "msg-system";
         var bubbleClass = role === "user" ? "bubble-user" : role === "assistant" ? "bubble-assistant" : "bubble-system";
@@ -194,13 +219,12 @@ export const searchPageScript = `
         var avatarHtml = role === "assistant" ? '<div class="avatar">' + avatarSvg + '</div>' : '';
         var q = role === "user" ? qualityScores[m.id] : null;
         var badgeHtml = q ? '<a href="/session?session_id=' + escapeHtml(String(selectedSession.id)) + '&message_id=' + escapeHtml(String(m.id)) + '" class="quality-badge quality-' + (q.grade || "c").toLowerCase().charAt(0) + '" title="Prompt quality">' + escapeHtml(String(q.score || "?")) + ' ' + escapeHtml(q.grade || "?") + '</a>' : '';
-        return '<div class="chat-msg ' + msgClass + '">' +
+        html += '<div class="chat-msg ' + msgClass + '">' +
           avatarHtml +
           '<div class="bubble-wrap"><div class="bubble ' + bubbleClass + '">' + content + '</div>' + badgeHtml + '</div>' +
         '</div>';
-      }).join("");
+      });
       document.getElementById("messages").innerHTML = html;
-      document.getElementById("copy-session").disabled = false;
     }
 
     function renderSessions(list) {
@@ -528,14 +552,6 @@ export const searchPageScript = `
         selectedSession = null;
         loadSessions();
       }
-    });
-
-    document.getElementById("copy-session").addEventListener("click", function () {
-      if (!selectedMessages || !selectedMessages.length) return;
-      var text = selectedMessages.map(function (m) {
-        return "[" + (m.role || "assistant") + "] " + formatTime(m.timestamp) + "\\n" + (m.content || "");
-      }).join("\\n\\n");
-      copyToClipboard(text, "Session copied!");
     });
 
     document.getElementById("messages").addEventListener("click", function (e) {

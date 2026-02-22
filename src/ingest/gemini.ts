@@ -117,10 +117,19 @@ function parseGeminiMessage(item: unknown): RawMessage | null {
       .join("\n");
   }
   if (!text.trim()) return null;
-  const ts = (obj.timestamp ?? obj.time ?? Date.now()) as number;
-  const timestamp = typeof ts === "number" ? ts : new Date(String(ts)).getTime();
+  const tsRaw = (obj.timestamp ?? obj.time ?? Date.now()) as number | string;
+  const timestamp = typeof tsRaw === "number" ? tsRaw : new Date(String(tsRaw)).getTime() || Date.now();
+  const normalizedRole =
+    role === "user"
+      ? "user"
+      : role === "model" || role === "assistant" || role === "gemini"
+        ? "assistant"
+        : role === "system" || role === "info"
+          ? "system"
+          : null;
+  if (normalizedRole === null) return null; // drop truly unrecognized roles
   return {
-    role: role === "user" ? "user" : role === "model" || role === "assistant" ? "assistant" : "user",
+    role: normalizedRole,
     content: text.trim(),
     timestamp,
     external_id: (obj.id ?? obj.uuid) as string | undefined,
@@ -130,13 +139,22 @@ function parseGeminiMessage(item: unknown): RawMessage | null {
 function parseGeminiPart(part: unknown): RawMessage | null {
   if (!part || typeof part !== "object") return null;
   const obj = part as Record<string, unknown>;
-  const text = (obj.text ?? obj.content ?? "") as string;
-  if (!String(text).trim()) return null;
+  let text = "";
+  if (typeof obj.text === "string") text = obj.text;
+  else if (typeof obj.content === "string") text = obj.content;
+  else if (Array.isArray(obj.parts)) {
+    text = (obj.parts as Array<{ text?: string }>)
+      .map((p) => p.text ?? "")
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (!text.trim()) return null;
   const role = (obj.role ?? "assistant") as string;
-  const ts = (obj.timestamp ?? Date.now()) as number;
+  const tsRaw = (obj.timestamp ?? obj.time ?? Date.now()) as number | string;
+  const timestamp = typeof tsRaw === "number" ? tsRaw : new Date(String(tsRaw)).getTime() || Date.now();
   return {
     role: role === "user" ? "user" : "assistant",
-    content: String(text).trim(),
-    timestamp: typeof ts === "number" ? ts : new Date(String(ts)).getTime(),
+    content: text.trim(),
+    timestamp,
   };
 }

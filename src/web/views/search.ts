@@ -7,6 +7,31 @@ export default function getSearchPage(): string {
 <body>
   <div class="layout">
     <aside class="sidebar">
+      <div class="sidebar-brand">
+        <svg class="brand-logo" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="bl-bg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4ADE80"/>
+              <stop offset="100%" stop-color="#15803D"/>
+            </linearGradient>
+          </defs>
+          <rect width="36" height="36" rx="8" fill="url(#bl-bg)"/>
+          <line x1="18" y1="18" x2="18" y2="9"  stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="26" y2="14" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="26" y2="23" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="18" y2="27" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="10" y2="23" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="10" y2="14" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <circle cx="18" cy="18" r="4"   fill="white"/>
+          <circle cx="18" cy="9"  r="2.5" fill="white"/>
+          <circle cx="26" cy="14" r="2.5" fill="white"/>
+          <circle cx="26" cy="23" r="2.5" fill="white"/>
+          <circle cx="18" cy="27" r="2.5" fill="white"/>
+          <circle cx="10" cy="23" r="2.5" fill="white"/>
+          <circle cx="10" cy="14" r="2.5" fill="white"/>
+        </svg>
+        <span class="brand-name">AssistMem</span>
+      </div>
       <div class="sidebar-filters">
         <form id="search-form" class="search-wrap" role="search">
           <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -44,8 +69,7 @@ export default function getSearchPage(): string {
       <div class="content-header" id="content-header">
         <h2 id="session-title">Select a session</h2>
         <div class="header-actions">
-          <a href="#" class="action-btn" id="analyze-session" title="Analyze prompt quality" style="display:none">Analyze</a>
-          <button type="button" class="action-btn" id="copy-session" disabled title="Copy session">Copy</button>
+          <a href="#" class="action-btn" id="analyze-session" title="View session detail" style="display:none">Insights</a>
         </div>
       </div>
       <div class="messages-area" id="messages">

@@ -112,6 +112,18 @@ export default function getSessionPage(): string {
     .analyze-status.error { color: #b91c1c; }
     .analyze-status.ok { color: #166534; }
     .analyze-status a { color: inherit; text-decoration: underline; }
+    .date-separator {
+      align-self: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.18rem 0.65rem;
+      margin: 0.4rem 0;
+      user-select: none;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -123,7 +135,7 @@ export default function getSessionPage(): string {
         <div class="meta" id="meta"></div>
       </div>
       <div>
-        <button type="button" class="btn-analyze" id="btnAnalyze" style="display:none">Analyze quality</button>
+        <button type="button" class="btn-analyze" id="btnAnalyze" style="display:none">Insights</button>
         <div class="analyze-status" id="analyzeStatus"></div>
       </div>
     </div>
@@ -219,6 +231,25 @@ export default function getSessionPage(): string {
       return badge + panel;
     }
 
+    function getDateKey(ts) {
+      var d = ts ? new Date(ts) : new Date();
+      return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+    }
+
+    function formatDateLabel(ts) {
+      if (!ts) return "Unknown date";
+      var d = new Date(ts);
+      var now = new Date();
+      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var yesterdayStart = todayStart - 86400000;
+      if (ts >= todayStart) return "Today";
+      if (ts >= yesterdayStart) return "Yesterday";
+      try {
+        return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(d);
+      } catch (_e) {}
+      return d.toDateString();
+    }
+
     function renderSession(data, highlightMessageId) {
       if (!data || !data.session) {
         document.getElementById("messages").innerHTML = '<div class="empty-state">Session not found.</div>';
@@ -235,7 +266,7 @@ export default function getSessionPage(): string {
       if (btn) {
         btn.style.display = userCount > 0 ? "inline-block" : "none";
         btn.disabled = false;
-        btn.textContent = "Analyze quality";
+        btn.textContent = "Insights";
         if (userCount > 0) {
           btn.dataset.sessionId = String(s.id);
         } else {
@@ -248,19 +279,26 @@ export default function getSessionPage(): string {
       }
 
       var qualityScores = data.quality_scores || {};
-      var html = (data.messages || []).map(function (m) {
+      var html = "";
+      var lastDateKey = null;
+      (data.messages || []).forEach(function (m) {
+        var dk = getDateKey(m.timestamp);
+        if (dk !== lastDateKey) {
+          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(m.timestamp)) + '</div>';
+          lastDateKey = dk;
+        }
         var ts = formatTime(m.timestamp);
         var role = (m.role || "assistant").toLowerCase();
         var roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
         var highlight = highlightMessageId && String(m.id) === String(highlightMessageId) ? " highlight" : "";
         var content = renderMarkdown(m.content || "(empty)");
         var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id]) : "";
-        return '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
+        html += '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
           '<div class="message-meta"><span class="role">' + escapeHtml(m.role || "assistant") + '</span><span>' + escapeHtml(ts) + '</span></div>' +
           '<div class="message-content">' + content + '</div>' +
           (qualityHtml ? '<div class="quality-feedback">' + qualityHtml + "</div>" : "") +
         '</div>';
-      }).join("");
+      });
       document.getElementById("messages").innerHTML = html || '<div class="empty-state">No messages found.</div>';
 
       document.querySelectorAll(".rewrite-chip").forEach(function(chip) {
@@ -313,7 +351,7 @@ export default function getSessionPage(): string {
         })
         .catch(function(err) {
           btn.disabled = false;
-          btn.textContent = "Analyze quality";
+          btn.textContent = "Insights";
           var msg = err && err.message ? err.message : "Analysis failed. Configure Insights Setup first.";
           var code = err && err.code ? String(err.code) : "";
           var needsApiKeyLink = code === "QUALITY_MODEL_NOT_CONFIGURED" || /api key/i.test(msg);

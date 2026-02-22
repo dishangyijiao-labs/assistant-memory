@@ -29,6 +29,31 @@ export const searchPageStyles = `
     /* Layout */
     .layout { display: flex; height: 100vh; }
 
+    /* Sidebar brand header */
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .brand-logo {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: block;
+    }
+    .brand-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* Sidebar */
     .sidebar {
       width: 280px;
@@ -369,6 +394,20 @@ export const searchPageStyles = `
     .empty-state .guidance { font-size: 0.82rem; line-height: 1.6; }
     .empty-state code { background: var(--surface); padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.78rem; }
     .error { color: #ef4444; }
+
+    /* Date separators between messages */
+    .date-separator {
+      align-self: center;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.18rem 0.65rem;
+      margin: 0.25rem 0;
+      user-select: none;
+      pointer-events: none;
+    }
 
     @media (max-width: 768px) {
       .sidebar { width: 240px; min-width: 240px; }

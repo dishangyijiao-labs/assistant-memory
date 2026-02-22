@@ -32,6 +32,38 @@ export function ingestClaudeCode(): RawSession[] {
   return sessions;
 }
 
+function claudeContentBlocksToText(blocks: unknown[]): string {
+  const parts: string[] = [];
+  for (const x of blocks) {
+    if (typeof x === "string") {
+      if (x.trim()) parts.push(x.trim());
+      continue;
+    }
+    if (!x || typeof x !== "object") continue;
+    const blk = x as Record<string, unknown>;
+    if (typeof blk.text === "string") {
+      if (blk.text.trim()) parts.push(blk.text.trim());
+    } else if (blk.type === "tool_use") {
+      const name = String(blk.name ?? "tool");
+      const input = blk.input !== undefined ? JSON.stringify(blk.input) : "";
+      parts.push(input ? `[tool_call] ${name} ${input}` : `[tool_call] ${name}`);
+    } else if (blk.type === "tool_result") {
+      const inner = blk.content;
+      const result =
+        typeof inner === "string"
+          ? inner
+          : Array.isArray(inner)
+            ? claudeContentBlocksToText(inner)
+            : "";
+      parts.push(result.trim() ? `[tool_result] ${result.trim()}` : "[tool_result]");
+    } else if (blk.type === "image" || blk.type === "image_url") {
+      parts.push("[image]");
+    }
+    // skip other unknown block types silently
+  }
+  return parts.join("\n");
+}
+
 interface ClaudeJsonlMessage {
   type?: string;
   uuid?: string;
@@ -51,13 +83,18 @@ function parseClaudeJsonl(filePath: string, workspace: string): RawSession | nul
   for (const line of lines) {
     try {
       const msg = JSON.parse(line) as ClaudeJsonlMessage;
-      const role = msg.type === "user" ? "user" : msg.type === "assistant" ? "assistant" : msg.type === "system" ? "system" : (msg.message?.role as string) ?? "assistant";
+      const roleRaw =
+        msg.type === "user" || msg.type === "assistant" || msg.type === "system"
+          ? msg.type
+          : (msg.message?.role as string | undefined) ?? "assistant";
+      const role: "user" | "assistant" | "system" =
+        roleRaw === "user" ? "user" : roleRaw === "system" ? "system" : "assistant";
       let text = "";
       if (typeof msg.content === "string") text = msg.content;
       else if (msg.message) {
         const c = (msg.message as { content?: string | unknown[] }).content;
         if (typeof c === "string") text = c;
-        else if (Array.isArray(c)) text = c.map((x: unknown) => (typeof x === "object" && x && "text" in x ? (x as { text: string }).text : String(x))).join("\n");
+        else if (Array.isArray(c)) text = claudeContentBlocksToText(c);
       }
       if (!text.trim() && role !== "system") continue;
       const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now();

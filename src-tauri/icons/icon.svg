@@ -1,28 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <!-- Background: indigo gradient (Apple HIG style, top-light to bottom-dark) -->
+    <!-- Background: green gradient (Apple HIG style, top-light to bottom-dark) -->
     <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#818CF8"/>
-      <stop offset="100%" stop-color="#4338CA"/>
+      <stop offset="0%"   stop-color="#4ADE80"/>
+      <stop offset="100%" stop-color="#15803D"/>
     </linearGradient>
 
     <!-- Subtle top-center radial highlight for Apple's dimensional look -->
     <radialGradient id="highlight" cx="50%" cy="18%" r="68%">
-      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
 
     <!-- Drop shadow filter for the symbol -->
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#2E1065" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#052E16" flood-opacity="0.30"/>
     </filter>
 
-    <!-- Squircle clip -->
+    <!-- Squircle clip (Apple macOS icon corner radius ≈ 22.4% of canvas) -->
     <clipPath id="squircle">
       <rect width="1024" height="1024" rx="229" ry="229"/>
     </clipPath>
   </defs>
 
+  <!-- Keep a transparent safety margin so Dock appearance is not oversized -->
+  <g transform="translate(61.44 61.44) scale(0.88)">
   <!-- ── Squircle background ── -->
   <rect width="1024" height="1024" rx="229" ry="229" fill="url(#bgGrad)"/>
 
@@ -30,29 +32,29 @@
   <rect width="1024" height="1024" rx="229" ry="229" fill="url(#highlight)"/>
 
   <!-- ── Symbol: AI Memory Network (hexagonal node graph) ── -->
-  <!-- Rendered with shadow for floating effect (Apple convention) -->
   <g filter="url(#shadow)">
 
     <!-- Connection lines from center (512,512) to each satellite node -->
-    <line x1="512" y1="512" x2="512" y2="310"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
-    <line x1="512" y1="512" x2="687" y2="413"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
-    <line x1="512" y1="512" x2="687" y2="611"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
-    <line x1="512" y1="512" x2="512" y2="714"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
-    <line x1="512" y1="512" x2="337" y2="611"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
-    <line x1="512" y1="512" x2="337" y2="413"  stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
+    <line x1="512" y1="512" x2="512" y2="344"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
+    <line x1="512" y1="512" x2="658" y2="428"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
+    <line x1="512" y1="512" x2="658" y2="596"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
+    <line x1="512" y1="512" x2="512" y2="680"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
+    <line x1="512" y1="512" x2="366" y2="596"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
+    <line x1="512" y1="512" x2="366" y2="428"  stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.90"/>
 
     <!-- Center node -->
-    <circle cx="512" cy="512" r="72" fill="white" fill-opacity="0.95"/>
+    <circle cx="512" cy="512" r="60" fill="white" fill-opacity="0.95"/>
 
-    <!-- 6 satellite nodes at hexagonal positions (radius 202 from center) -->
-    <circle cx="512" cy="310" r="40" fill="white" fill-opacity="0.92"/>   <!-- top -->
-    <circle cx="687" cy="413" r="40" fill="white" fill-opacity="0.92"/>   <!-- top-right -->
-    <circle cx="687" cy="611" r="40" fill="white" fill-opacity="0.92"/>   <!-- bottom-right -->
-    <circle cx="512" cy="714" r="40" fill="white" fill-opacity="0.92"/>   <!-- bottom -->
-    <circle cx="337" cy="611" r="40" fill="white" fill-opacity="0.92"/>   <!-- bottom-left -->
-    <circle cx="337" cy="413" r="40" fill="white" fill-opacity="0.92"/>   <!-- top-left -->
+    <!-- 6 satellite nodes at hexagonal positions (radius 168 from center) -->
+    <circle cx="512" cy="344" r="32" fill="white" fill-opacity="0.92"/>
+    <circle cx="658" cy="428" r="32" fill="white" fill-opacity="0.92"/>
+    <circle cx="658" cy="596" r="32" fill="white" fill-opacity="0.92"/>
+    <circle cx="512" cy="680" r="32" fill="white" fill-opacity="0.92"/>
+    <circle cx="366" cy="596" r="32" fill="white" fill-opacity="0.92"/>
+    <circle cx="366" cy="428" r="32" fill="white" fill-opacity="0.92"/>
 
-    <!-- Small inner accent dot in center node (depth detail) -->
-    <circle cx="512" cy="512" r="22" fill="#6366F1" fill-opacity="0.55"/>
+    <!-- Inner accent dot in center node (depth detail) -->
+    <circle cx="512" cy="512" r="18" fill="#16A34A" fill-opacity="0.55"/>
+  </g>
   </g>
 </svg>

@@ -137,8 +137,9 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
 
       const role = normalizeRole(req.role as string | undefined);
       const roleContent = role ? copilotText(req.content ?? req.message ?? req.text ?? req) : "";
+      const reqExternalId = (req.id ?? req.messageId ?? req.requestId) as string | undefined;
       if (role && roleContent.trim()) {
-        messages.push({ role, content: roleContent.trim(), timestamp });
+        messages.push({ role, content: roleContent.trim(), timestamp, external_id: reqExternalId });
         continue;
       }
 
@@ -148,7 +149,8 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
           if (!msgRole) continue;
           const msgText = copilotText(msg.content ?? msg.message ?? msg.text ?? msg);
           if (msgText.trim()) {
-            messages.push({ role: msgRole, content: msgText.trim(), timestamp });
+            const msgId = (msg.id ?? msg.messageId) as string | undefined;
+            messages.push({ role: msgRole, content: msgText.trim(), timestamp, external_id: msgId });
           }
         }
         continue;
@@ -156,11 +158,11 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
 
       const prompt = copilotText(req.prompt ?? req.input ?? req.message ?? req.text ?? "");
       if (prompt.trim()) {
-        messages.push({ role: "user", content: prompt.trim(), timestamp });
+        messages.push({ role: "user", content: prompt.trim(), timestamp, external_id: reqExternalId });
       }
       const response = copilotText(req.response ?? req.output ?? req.content ?? req.text ?? "");
       if (response.trim()) {
-        messages.push({ role: "assistant", content: response.trim(), timestamp });
+        messages.push({ role: "assistant", content: response.trim(), timestamp, external_id: reqExternalId ? `${reqExternalId}-response` : undefined });
       }
     }
 

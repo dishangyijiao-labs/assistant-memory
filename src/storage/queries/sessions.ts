@@ -280,7 +280,7 @@ export function getSessionDetail(
   sessionId: number,
   limit: number = 2000,
   offset: number = 0,
-  order: "asc" | "desc" = "desc"
+  order: "asc" | "desc" = "asc"
 ): SessionDetail | null {
   const database = getDb();
   const session = database

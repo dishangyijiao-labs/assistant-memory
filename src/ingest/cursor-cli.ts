@@ -93,8 +93,19 @@ function parseCursorChatData(json: string): RawSession[] {
         if (s) out.push(s);
       }
     } else if (parsed && typeof parsed === "object") {
-      const s = cursorConvToSession(parsed);
-      if (s) out.push(s);
+      // Handle allComposers format (same as cursor.ts)
+      if (parsed.allComposers && Array.isArray(parsed.allComposers)) {
+        for (const c of parsed.allComposers as Array<Record<string, unknown>>) {
+          const conv = c.composer ?? c;
+          if (conv && typeof conv === "object") {
+            const s = cursorConvToSession(conv as Record<string, unknown>);
+            if (s) out.push(s);
+          }
+        }
+      } else {
+        const s = cursorConvToSession(parsed);
+        if (s) out.push(s);
+      }
     }
   } catch (_e) {
     // Ignore
@@ -239,24 +250,54 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
   return messages;
 }
 
-function parseCursorCliChatFile(json: string, filename: string): RawSession | null {
+function parseCursorCliChatFile(raw: string, filename: string): RawSession | null {
+  const baseId = filename.replace(/\.(json|jsonl)$/, "");
+
+  // Try single-object JSON first (covers .json and single-object .jsonl)
   try {
-    const data = JSON.parse(json) as Record<string, unknown>;
+    const data = JSON.parse(raw) as Record<string, unknown>;
     const messages = extractCursorMessages(data);
-    if (messages.length === 0) return null;
-    const timestamps = messages.map((m) => m.timestamp).filter((t) => t > 0);
-    const started = timestamps.length ? Math.min(...timestamps) : Date.now();
-    const last = timestamps.length ? Math.max(...timestamps) : Date.now();
-    const id = (data.id ?? data.sessionId ?? filename.replace(/\.(json|jsonl)$/, "")) as string;
-    return {
-      source: "cursor-cli",
-      workspace: "chats",
-      external_id: String(id),
-      started_at: started,
-      last_at: last,
-      messages,
-    };
+    if (messages.length > 0) {
+      const timestamps = messages.map((m) => m.timestamp).filter((t) => t > 0);
+      const started = timestamps.length ? Math.min(...timestamps) : Date.now();
+      const last = timestamps.length ? Math.max(...timestamps) : Date.now();
+      const id = (data.id ?? data.sessionId ?? baseId) as string;
+      return {
+        source: "cursor-cli",
+        workspace: "chats",
+        external_id: String(id),
+        started_at: started,
+        last_at: last,
+        messages,
+      };
+    }
   } catch (_e) {
-    return null;
+    // Not single-object JSON — fall through to JSONL parsing
   }
+
+  // JSONL: each line is a separate message/conversation object
+  const lines = raw.split("\n").filter((l) => l.trim());
+  if (lines.length === 0) return null;
+  const allMessages: import("./types.js").RawMessage[] = [];
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line) as Record<string, unknown>;
+      const msgs = extractCursorMessages(obj);
+      allMessages.push(...msgs);
+    } catch (_e) {
+      // Skip unparseable lines
+    }
+  }
+  if (allMessages.length === 0) return null;
+  const timestamps = allMessages.map((m) => m.timestamp).filter((t) => t > 0);
+  const started = timestamps.length ? Math.min(...timestamps) : Date.now();
+  const last = timestamps.length ? Math.max(...timestamps) : Date.now();
+  return {
+    source: "cursor-cli",
+    workspace: "chats",
+    external_id: baseId,
+    started_at: started,
+    last_at: last,
+    messages: allMessages,
+  };
 }

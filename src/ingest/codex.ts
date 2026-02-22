@@ -171,7 +171,11 @@ function codexLegacyMessage(item: Record<string, unknown>): RawMessage | null {
 }
 
 function codexTimestamp(value: unknown): number | null {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") {
+    // Values below 1e12 are likely Unix seconds (ms would place them before year 2001).
+    // Modern AI tool sessions are always post-2020, so seconds < 1e12 need ×1000.
+    return value < 1e12 ? value * 1000 : value;
+  }
   if (typeof value === "string") {
     const ts = new Date(value).getTime();
     return Number.isFinite(ts) ? ts : null;

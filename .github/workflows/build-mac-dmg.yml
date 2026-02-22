@@ -24,7 +24,16 @@ jobs:
   build-mac:
     needs: [create-release]
     if: always() && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
-    runs-on: macos-14  # Apple Silicon runner for aarch64
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            artifact: AssistMem-macOS-arm64
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            artifact: AssistMem-macOS-x86_64
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
 
@@ -40,7 +49,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: ${{ matrix.target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -51,31 +60,25 @@ jobs:
         run: npm ci
 
       - name: Build Mac DMG
-        run: npm run mac:release
+        run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target ${{ matrix.target }} --bundles app,dmg --no-sign --ci
         env:
           CI: true
 
       - name: Verify build outputs
         run: |
           set -euo pipefail
-          ls -la src-tauri/target || true
-          ls -la src-tauri/target/release/bundle || true
-          ls -la src-tauri/target/aarch64-apple-darwin/release/bundle || true
+          ls -la src-tauri/target/${{ matrix.target }}/release/bundle/dmg/ || true
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AssistMem-macOS-aarch64
-          path: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/dmg/*.dmg
+          name: ${{ matrix.artifact }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
       - name: Attach DMG to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/dmg/*.dmg
+          files: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
