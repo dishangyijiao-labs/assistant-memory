@@ -40,8 +40,8 @@ if [ -d "${INSTALL_DIR}/${APP_NAME}" ]; then
 fi
 cp -R "${MOUNT_POINT}/${APP_NAME}" "${INSTALL_DIR}/"
 
-# Strip any quarantine that may have been inherited
-xattr -r -d com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}" 2>/dev/null || true
+# Strip any quarantine that may have been inherited (use system xattr, not Homebrew's)
+/usr/bin/xattr -r -d com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}" 2>/dev/null || true
 
 # Cleanup
 hdiutil detach "$MOUNT_POINT" -quiet
