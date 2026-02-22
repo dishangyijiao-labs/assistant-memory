@@ -22,7 +22,14 @@ jobs:
           body: |
             ## Installation
 
-            Download the DMG, open it, and drag **AssistMem** into your Applications folder.
+            ### Option 1 — Homebrew (Recommended)
+            ```bash
+            brew tap dishangyijiao/tap
+            brew install --cask assistmem
+            ```
+
+            ### Option 2 — Manual DMG
+            Download the DMG below, open it, and drag **AssistMem** into your Applications folder.
 
             **First launch:** macOS may block the app because it is not notarized by Apple. To open it:
             1. **Right-click** AssistMem.app → choose **Open** → confirm in the dialog, or
@@ -106,3 +113,24 @@ jobs:
         with:
           files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
+
+      - name: Update Homebrew Tap
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') && !contains(github.ref, 'rc')
+        env:
+          REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          DMG_PATH="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/AssistMem_${VERSION}_aarch64.dmg"
+          SHA256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
+
+          git clone https://x-access-token:${REPO_ADMIN_TOKEN}@github.com/dishangyijiao/homebrew-tap.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+
+          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/assistmem.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" Casks/assistmem.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/assistmem.rb
+          git diff --staged --quiet || git commit -m "chore: update AssistMem to v${VERSION}"
+          git push
