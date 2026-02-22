@@ -19,21 +19,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body: |
+            ## Installation
+
+            Download the DMG, open it, and drag **AssistMem** into your Applications folder.
+
+            **First launch:** macOS may block the app because it is not notarized by Apple. To open it:
+            1. **Right-click** AssistMem.app → choose **Open** → confirm in the dialog, or
+            2. Go to **System Settings → Privacy & Security** → scroll down and click **Open Anyway**
+
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
 
   build-mac:
     needs: [create-release]
     if: always() && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
-    strategy:
-      matrix:
-        include:
-          - runner: macos-14
-            target: aarch64-apple-darwin
-            artifact: AssistMem-macOS-arm64
-          - runner: macos-13
-            target: x86_64-apple-darwin
-            artifact: AssistMem-macOS-x86_64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-14
     permissions:
       contents: write
 
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -59,26 +59,50 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Mac DMG
-        run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target ${{ matrix.target }} --bundles app,dmg --no-sign --ci
+      - name: Build app bundle
+        run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target aarch64-apple-darwin --bundles app --no-sign --ci
         env:
           CI: true
 
-      - name: Verify build outputs
+      - name: Ad-hoc sign app bundle
         run: |
-          set -euo pipefail
-          ls -la src-tauri/target/${{ matrix.target }}/release/bundle/dmg/ || true
+          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/AssistMem.app"
+          codesign --force --deep --sign - "$APP"
+          echo "Signature info:"
+          codesign --display --verbose "$APP" 2>&1
+
+      - name: Create DMG
+        run: |
+          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/AssistMem.app"
+          DMG_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+          VERSION=$(node -p "require('./package.json').version")
+          DMG_PATH="$DMG_DIR/AssistMem_${VERSION}_aarch64.dmg"
+
+          mkdir -p "$DMG_DIR"
+
+          STAGING=$(mktemp -d)
+          cp -R "$APP" "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+
+          hdiutil create \
+            -volname "AssistMem" \
+            -srcfolder "$STAGING" \
+            -ov -format UDZO \
+            "$DMG_PATH"
+
+          rm -rf "$STAGING"
+          ls -lh "$DMG_DIR/"
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          name: AssistMem-macOS-arm64
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
       - name: Attach DMG to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
