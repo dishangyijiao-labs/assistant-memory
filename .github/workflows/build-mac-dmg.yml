@@ -22,19 +22,24 @@ jobs:
           body: |
             ## Installation
 
-            ### Option 1 — Shell script (Recommended, no Gatekeeper prompt)
-            Open Terminal and run:
+            ### Option 1 — Homebrew (Recommended)
+            ```bash
+            brew install dishangyijiao/tap/assistmem
+            ```
+            Homebrew handles Gatekeeper automatically — no extra steps needed.
+
+            ### Option 2 — Shell script
             ```bash
             curl -fsSL https://raw.githubusercontent.com/dishangyijiao/assistant-memory/main/install.sh | bash
             ```
-            The script downloads and installs AssistMem without triggering macOS Gatekeeper.
 
-            ### Option 2 — Manual DMG
+            ### Option 3 — Manual DMG
             Download the DMG below, open it, and drag **AssistMem** into your Applications folder.
-            Then run in Terminal to remove the Gatekeeper block:
-            ```bash
-            xattr -r -d com.apple.quarantine /Applications/AssistMem.app
-            ```
+
+            > **⚠️ Important:** macOS will block unsigned apps. Run this in Terminal after installing:
+            > ```bash
+            > sudo /usr/bin/xattr -cr /Applications/AssistMem.app
+            > ```
 
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
 
