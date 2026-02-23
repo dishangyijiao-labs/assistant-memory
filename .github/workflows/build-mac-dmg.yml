@@ -1,8 +1,7 @@
-name: Build Mac DMG
+name: Build macOS App
 
 on:
   push:
-    branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -22,24 +21,9 @@ jobs:
           body: |
             ## Installation
 
-            ### Option 1 — Homebrew (Recommended)
             ```bash
             brew install dishangyijiao/tap/assistmem
             ```
-            Homebrew handles Gatekeeper automatically — no extra steps needed.
-
-            ### Option 2 — Shell script
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/dishangyijiao/assistant-memory/main/install.sh | bash
-            ```
-
-            ### Option 3 — Manual DMG
-            Download the DMG below, open it, and drag **AssistMem** into your Applications folder.
-
-            > **⚠️ Important:** macOS will block unsigned apps. Run this in Terminal after installing:
-            > ```bash
-            > sudo /usr/bin/xattr -cr /Applications/AssistMem.app
-            > ```
 
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
 
@@ -73,52 +57,9 @@ jobs:
         run: npm ci
 
       - name: Build app bundle
-        run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target aarch64-apple-darwin --bundles app --no-sign --ci
+        run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target aarch64-apple-darwin --bundles app,dmg --no-sign --ci
         env:
           CI: true
-
-      - name: Ad-hoc sign app bundle
-        run: |
-          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/AssistMem.app"
-          codesign --force --deep --sign - "$APP"
-          echo "Signature info:"
-          codesign --display --verbose "$APP" 2>&1
-
-      - name: Create DMG
-        run: |
-          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/AssistMem.app"
-          DMG_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
-          VERSION=$(node -p "require('./package.json').version")
-          DMG_PATH="$DMG_DIR/AssistMem_${VERSION}_aarch64.dmg"
-
-          mkdir -p "$DMG_DIR"
-
-          STAGING=$(mktemp -d)
-          cp -R "$APP" "$STAGING/"
-          ln -s /Applications "$STAGING/Applications"
-
-          hdiutil create \
-            -volname "AssistMem" \
-            -srcfolder "$STAGING" \
-            -ov -format UDZO \
-            "$DMG_PATH"
-
-          rm -rf "$STAGING"
-          ls -lh "$DMG_DIR/"
-
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: AssistMem-macOS-arm64
-          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-          if-no-files-found: error
-
-      - name: Attach DMG to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
 
       - name: Update Homebrew Tap
         if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') && !contains(github.ref, 'rc')
