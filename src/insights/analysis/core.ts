@@ -1,5 +1,10 @@
-import type { InsightMessage } from "../../storage/db.js";
-import type { LabeledCount, LocalAnalysis, ProblemCard } from "../types/index.js";
+import type { InsightMessage, QualityKpiSnapshot, LowQualityQuestion } from "../../storage/db.js";
+import type { LabeledCount, LocalAnalysis, ProblemCard, PromptCoach, PromptIssue, PromptPlaybook } from "../types/index.js";
+
+export interface QualityContext {
+  kpi: QualityKpiSnapshot;
+  topLowQualityQuestions: LowQualityQuestion[];
+}
 import {
   CAPABILITY_KEYWORDS,
   LANGUAGE_KEYWORDS,
@@ -20,7 +25,212 @@ import {
 } from "./helpers.js";
 import { computeTopicCards, takeTopKeywords } from "./topics.js";
 
-export function localAnalysis(messages: InsightMessage[]): LocalAnalysis {
+const DEPTH_KEYWORDS = ["tradeoff", "trade-off", "assumption", "risk", "criteria", "constraint", "alternative", "requirement", "consideration"];
+const TOKEN_EFFICIENCY_KEYWORDS = ["as a list", "concise", "brief", "bullet", "short", "summarize", "tl;dr", "keep it", "in \\d+ lines?"];
+const CONSTRAINT_KEYWORDS = ["must", "should", "limit", "max", "at most", "no more than", "constraint", "require"];
+const ACCEPTANCE_KEYWORDS = ["should", "expect", "must", "verify", "test", "assert", "check that", "acceptance"];
+const FORMAT_KEYWORDS = ["list", "table", "json", "markdown", "bullet", "format", "concise", "brief"];
+
+interface AntiPatternDef {
+  name: string;
+  impact: "high" | "medium" | "low";
+  why_it_hurts: string;
+  detect: (content: string, contentLower: string) => boolean;
+  playbook: PromptPlaybook;
+}
+
+const ANTI_PATTERNS: AntiPatternDef[] = [
+  {
+    name: "Vague goal",
+    impact: "high",
+    why_it_hurts: "Without a clear goal, the assistant guesses intent and produces generic or irrelevant output, wasting tokens and requiring follow-ups.",
+    detect: (content, lower) => !content.includes("?") && content.length < 80 && !content.includes("```"),
+    playbook: {
+      name: "Goal-First Prompting",
+      when_to_use: "When you catch yourself writing a short, open-ended request without a specific deliverable.",
+      rewrite_short: "Refactor the login handler to return 401 on expired tokens.",
+      rewrite_deep: "Refactor the login handler: return 401 on expired tokens, add refresh-token rotation, and include integration test stubs for both paths.",
+      rewrite_token_lean: "Fix login handler: 401 on expired token. Show only changed lines.",
+      checklist: ["State the specific deliverable", "Name the file or function", "Describe the expected output shape"],
+      token_budget_hint: "Keep goal statement under 2 sentences; details go in constraints.",
+      expected_gain: "50-70% fewer clarification round-trips.",
+    },
+  },
+  {
+    name: "Missing constraints",
+    impact: "high",
+    why_it_hurts: "Unconstrained prompts let the assistant pick arbitrary scope, performance targets, and tech choices, often requiring rework.",
+    detect: (content, lower) =>
+      content.length > 100 && !CONSTRAINT_KEYWORDS.some((kw) => lower.includes(kw)),
+    playbook: {
+      name: "Constraint Injection",
+      when_to_use: "When your prompt describes what to build but not the boundaries (performance, size, compatibility).",
+      rewrite_short: "Add pagination to /api/users. Max 50 per page, cursor-based, must work with existing auth middleware.",
+      rewrite_deep: "Add cursor-based pagination to /api/users. Max 50/page, keyset pagination on created_at, backward-compatible response envelope, must not break existing mobile client contract.",
+      rewrite_token_lean: "Paginate /api/users: cursor-based, max 50, keyset on created_at. Diff only.",
+      checklist: ["Add at least one 'must' or 'must not'", "Specify size/performance limits", "Name compatibility requirements"],
+      token_budget_hint: "2-3 constraint bullets add ~30 tokens but save entire rework cycles.",
+      expected_gain: "40-60% reduction in scope-creep rework.",
+    },
+  },
+  {
+    name: "No acceptance criteria",
+    impact: "medium",
+    why_it_hurts: "Without success criteria, you cannot objectively evaluate the output and end up in subjective revision loops.",
+    detect: (content, lower) =>
+      content.length > 120 && !ACCEPTANCE_KEYWORDS.some((kw) => lower.includes(kw)),
+    playbook: {
+      name: "Acceptance-Driven Prompting",
+      when_to_use: "When you would struggle to write a pass/fail check for the expected output.",
+      rewrite_short: "Write a date parser that handles ISO-8601 and Unix timestamps. It should return null for invalid input and never throw.",
+      rewrite_deep: "Write a date parser: accepts ISO-8601 and Unix timestamps, returns Date | null, never throws. Include 5 test cases covering edge cases (empty string, negative timestamp, timezone offset).",
+      rewrite_token_lean: "Date parser: ISO-8601 + Unix → Date|null, no throw. Add 3 test cases.",
+      checklist: ["Define at least one 'should' or 'must' for output", "Include a test case or example", "Specify error behavior"],
+      token_budget_hint: "One 'should …' sentence plus one example adds ~20 tokens.",
+      expected_gain: "30-50% fewer revision cycles.",
+    },
+  },
+  {
+    name: "No output format",
+    impact: "medium",
+    why_it_hurts: "Unspecified format leads to verbose prose when you wanted a table, or raw code when you wanted an explanation, wasting tokens on reformatting.",
+    detect: (content, lower) =>
+      content.length > 80 && !FORMAT_KEYWORDS.some((kw) => lower.includes(kw)),
+    playbook: {
+      name: "Format-First Framing",
+      when_to_use: "When you know exactly how you want to consume the output (paste into code, scan a table, read a summary).",
+      rewrite_short: "List the top 5 performance bottlenecks as a numbered list with one sentence each.",
+      rewrite_deep: "Analyze performance bottlenecks. Return a markdown table with columns: Location, Impact (high/med/low), Fix complexity, Suggested action. Max 7 rows.",
+      rewrite_token_lean: "Top 5 perf issues. Numbered list, 1 sentence each. No preamble.",
+      checklist: ["Name the output format (list, table, code block, JSON)", "Specify length or row limit", "Say whether preamble/explanation is wanted"],
+      token_budget_hint: "Adding 'as a list of N items' costs ~8 tokens, saves hundreds in unwanted prose.",
+      expected_gain: "60-80% reduction in reformatting follow-ups.",
+    },
+  },
+];
+
+export function computePromptCoach(
+  messages: InsightMessage[],
+  qualityContext?: QualityContext,
+): PromptCoach {
+  try {
+    const userMessages = messages.filter((m) => m.role === "user");
+    const totalUser = Math.max(1, userMessages.length);
+
+    // Depth score: % of user messages >150 chars containing depth keywords
+    const deepCount = userMessages.filter((m) => {
+      if (m.content.length <= 150) return false;
+      const lower = m.content.toLowerCase();
+      return DEPTH_KEYWORDS.some((kw) => lower.includes(kw));
+    }).length;
+    const depth_score = clampScore((deepCount / totalUser) * 200);
+
+    // Token efficiency score: % of user messages with format/length directives
+    const tokenEfficientRegex = new RegExp(TOKEN_EFFICIENCY_KEYWORDS.join("|"), "i");
+    const efficientCount = userMessages.filter((m) => tokenEfficientRegex.test(m.content)).length;
+    const token_efficiency_score = clampScore((efficientCount / totalUser) * 300);
+
+    // Detect anti-patterns
+    const patternHits: Array<{ def: AntiPatternDef; evidence: Array<{ session_id: number; message_id: number }>; frequency: number }> = [];
+
+    for (const pattern of ANTI_PATTERNS) {
+      const evidence: Array<{ session_id: number; message_id: number }> = [];
+      for (const m of userMessages) {
+        const lower = m.content.toLowerCase();
+        if (pattern.detect(m.content, lower)) {
+          evidence.push({ session_id: m.session_id, message_id: m.message_id });
+        }
+      }
+      if (evidence.length > 0) {
+        patternHits.push({ def: pattern, evidence, frequency: evidence.length });
+      }
+    }
+
+    // Boost anti-pattern frequency using quality deduction reasons
+    if (qualityContext?.topLowQualityQuestions.length) {
+      const allDeductions = qualityContext.topLowQualityQuestions
+        .flatMap((q) => q.deduction_reasons.split(";").map((s) => s.trim().toLowerCase()));
+      for (const hit of patternHits) {
+        const boost = allDeductions.filter((d) => d.includes(hit.def.name.toLowerCase())).length;
+        hit.frequency += boost;
+      }
+    }
+
+    // Sort by frequency descending, take top 3
+    patternHits.sort((a, b) => b.frequency - a.frequency);
+    const top3 = patternHits.slice(0, 3);
+
+    const top_issues: PromptIssue[] = top3.map((hit) => ({
+      issue: hit.def.name,
+      frequency: hit.frequency,
+      impact: hit.def.impact,
+      why_it_hurts: hit.def.why_it_hurts,
+      evidence: hit.evidence.slice(0, 5),
+    }));
+
+    const playbooks: PromptPlaybook[] = top3.map((hit) => hit.def.playbook);
+
+    // Generate next-week plan based on detected issues
+    const detectedNames = new Set(top3.map((h) => h.def.name));
+    const next_week_plan: string[] = [];
+
+    if (detectedNames.has("Vague goal")) {
+      next_week_plan.push("Practice writing a one-sentence goal statement before every prompt.");
+    }
+    if (detectedNames.has("Missing constraints")) {
+      next_week_plan.push("Add at least two explicit constraints (must/must-not) to each implementation prompt.");
+    }
+    if (detectedNames.has("No acceptance criteria")) {
+      next_week_plan.push("Include one test case or success criterion in every prompt over 100 characters.");
+    }
+    if (detectedNames.has("No output format")) {
+      next_week_plan.push("Specify the desired output format (list, table, code block) in every prompt.");
+    }
+    // Fill to 5 items with general advice
+    const generalAdvice = [
+      "Review your three longest sessions and identify where a better initial prompt could have saved follow-ups.",
+      "Try the rewrite templates from your top playbook on at least 3 real prompts this week.",
+      "Measure your first-pass success rate by counting how often the first response is usable without edits.",
+      "Experiment with token-lean rewrites to reduce response length without losing quality.",
+      "Create a personal prompt checklist based on your most frequent anti-patterns.",
+    ];
+    for (const advice of generalAdvice) {
+      if (next_week_plan.length >= 5) break;
+      next_week_plan.push(advice);
+    }
+
+    const hasQualitySample = (qualityContext?.kpi.scored_question_count ?? 0) > 0;
+
+    return {
+      kpis: {
+        depth_score,
+        token_efficiency_score,
+        first_pass_resolution_rate: hasQualitySample ? qualityContext!.kpi.first_pass_resolution_rate : null,
+        high_quality_ratio: hasQualitySample ? qualityContext!.kpi.high_quality_ratio : null,
+        repeated_question_ratio: hasQualitySample ? qualityContext!.kpi.repeated_question_ratio : null,
+      },
+      top_issues,
+      playbooks,
+      next_week_plan: next_week_plan.slice(0, 5),
+    };
+  } catch {
+    // Never throw — return safe defaults
+    return {
+      kpis: {
+        depth_score: 0,
+        token_efficiency_score: 0,
+        first_pass_resolution_rate: null,
+        high_quality_ratio: null,
+        repeated_question_ratio: null,
+      },
+      top_issues: [],
+      playbooks: [],
+      next_week_plan: [],
+    };
+  }
+}
+
+export function localAnalysis(messages: InsightMessage[], qualityContext?: QualityContext): LocalAnalysis {
   const totalMessages = messages.length;
   const sessionIds = [...new Set(messages.map((message) => message.session_id))];
   const sessionCount = Math.max(1, sessionIds.length);
@@ -246,6 +456,8 @@ export function localAnalysis(messages: InsightMessage[]): LocalAnalysis {
   const ambitiousBody =
     "As your session library grows, you can automate cross-session orchestration and generate reusable architecture artifacts from historical conversations.";
 
+  const promptCoach = computePromptCoach(messages, qualityContext);
+
   const details = buildInsightDetails({
     sessionCount,
     topicCards,
@@ -266,6 +478,7 @@ export function localAnalysis(messages: InsightMessage[]): LocalAnalysis {
     hinderingBody,
     quickWinsBody,
     ambitiousBody,
+    prompt_coach: promptCoach,
   });
 
   return {
@@ -284,5 +497,6 @@ export function localAnalysis(messages: InsightMessage[]): LocalAnalysis {
     messageCount: totalMessages,
     snippetCount,
     sources: sourceLabels,
+    prompt_coach: promptCoach,
   };
 }

@@ -188,7 +188,21 @@ export function createHandler() {
             );
             return;
           }
-          const insight = await generateInsight(messages, modelConfig);
+          const qualitySessionIds =
+            validSelectedIds.length > 0
+              ? validSelectedIds
+              : [...new Set(messages.map((m) => m.session_id))];
+          const qualityKpi = db.getQualityKpiForScope({ sessionIds: qualitySessionIds });
+          const topLowQualityQuestions = db.getTopLowQualityQuestions({
+            sessionIds: qualitySessionIds,
+            limit: 10,
+            maxScore: 70,
+          });
+          const qualityContext = {
+            kpi: qualityKpi,
+            topLowQualityQuestions,
+          } satisfies { kpi: db.QualityKpiSnapshot; topLowQualityQuestions: db.LowQualityQuestion[] };
+          const insight = await generateInsight(messages, modelConfig, qualityContext);
           const sessionMessageCountMap = new Map<number, number>();
           for (const message of messages) {
             sessionMessageCountMap.set(message.session_id, (sessionMessageCountMap.get(message.session_id) ?? 0) + 1);

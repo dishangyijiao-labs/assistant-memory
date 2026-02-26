@@ -73,7 +73,7 @@ export function buildQualityAnalyzerUserPrompt(
     );
     for (let i = 0; i < ragExamples.length; i++) {
       const ex = ragExamples[i];
-      const meta = ex.score != null ? ` [score ${ex.score}${ex.grade ? `, grade ${ex.grade}` : ""}]` : "";
+      const meta = ex.score !== null && ex.score !== undefined ? ` [score ${ex.score}${ex.grade ? `, grade ${ex.grade}` : ""}]` : "";
       sections.push(`--- Example ${i + 1}${meta} ---`, ex.content.trim().slice(0, 350), "");
     }
     sections.push("--- Question to analyze ---", "");

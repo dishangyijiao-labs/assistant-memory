@@ -43,6 +43,40 @@ export interface AtGlanceCard {
   cta: string;
 }
 
+export interface PromptCoachKpis {
+  depth_score: number;
+  token_efficiency_score: number;
+  first_pass_resolution_rate: number | null;
+  high_quality_ratio: number | null;
+  repeated_question_ratio: number | null;
+}
+
+export interface PromptIssue {
+  issue: string;
+  frequency: number;
+  impact: "high" | "medium" | "low";
+  why_it_hurts: string;
+  evidence: Array<{ session_id: number; message_id: number }>;
+}
+
+export interface PromptPlaybook {
+  name: string;
+  when_to_use: string;
+  rewrite_short: string;
+  rewrite_deep: string;
+  rewrite_token_lean: string;
+  checklist: string[];
+  token_budget_hint: string;
+  expected_gain: string;
+}
+
+export interface PromptCoach {
+  kpis: PromptCoachKpis;
+  top_issues: PromptIssue[];
+  playbooks: PromptPlaybook[];
+  next_week_plan: string[];
+}
+
 export interface InsightDetails {
   at_a_glance: {
     working: AtGlanceCard;
@@ -85,6 +119,7 @@ export interface InsightDetails {
     intro: string;
     cards: HorizonCard[];
   };
+  prompt_coach?: PromptCoach;
 }
 
 export interface InsightGenerationResult {
@@ -122,4 +157,5 @@ export interface LocalAnalysis {
   messageCount: number;
   snippetCount: number;
   sources: string[];
+  prompt_coach: PromptCoach;
 }

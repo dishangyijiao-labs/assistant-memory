@@ -241,12 +241,121 @@ export const insightsReportsScriptDetail = `
         }).join("");
     }
 
+    function renderPromptCoach(details) {
+      var pc = details.prompt_coach;
+      if (!pc) {
+        return '<div class="empty">Run a report with an AI model to unlock Prompt Coach insights.</div>';
+      }
+
+      var kpis = pc.kpis || {};
+      function isFiniteNumber(v) {
+        return typeof v === "number" && Number.isFinite(v);
+      }
+      function scoreLabel(v) {
+        return isFiniteNumber(v) ? String(v) : "N/A";
+      }
+      function ratioLabel(v) {
+        return isFiniteNumber(v) ? (v * 100).toFixed(0) + "%" : "N/A";
+      }
+      function scoreClass(v, good, neutral) {
+        if (!isFiniteNumber(v)) return "neutral";
+        if (v >= good) return "good";
+        if (v >= neutral) return "neutral";
+        return "bad";
+      }
+      function kpiCard(label, value, cls) {
+        return '<div class="coach-kpi-card ' + (cls || "neutral") + '">' +
+          '<div class="coach-kpi-value">' + escapeHtml(value != null ? String(value) : "N/A") + '</div>' +
+          '<div class="coach-kpi-label">' + escapeHtml(label) + '</div>' +
+        '</div>';
+      }
+      var qualitySampled = isFiniteNumber(kpis.first_pass_resolution_rate) &&
+        isFiniteNumber(kpis.high_quality_ratio) &&
+        isFiniteNumber(kpis.repeated_question_ratio);
+      var kpiHtml = '<div class="coach-kpi-grid">' +
+        kpiCard("Depth Score", scoreLabel(kpis.depth_score), scoreClass(kpis.depth_score, 70, 40)) +
+        kpiCard("Token Efficiency", scoreLabel(kpis.token_efficiency_score), scoreClass(kpis.token_efficiency_score, 70, 40)) +
+        kpiCard("First-Pass Resolution", ratioLabel(kpis.first_pass_resolution_rate), scoreClass(kpis.first_pass_resolution_rate, 0.7, 0.4)) +
+        kpiCard("High-Quality Ratio", ratioLabel(kpis.high_quality_ratio), scoreClass(kpis.high_quality_ratio, 0.7, 0.4)) +
+        kpiCard("Repeated Question Ratio", ratioLabel(kpis.repeated_question_ratio), scoreClass((isFiniteNumber(kpis.repeated_question_ratio) ? 1 - kpis.repeated_question_ratio : null), 0.7, 0.4)) +
+      '</div>' +
+      (!qualitySampled
+        ? '<div class="coach-unsampled">未采样 (Not sampled): quality KPI metrics are unavailable because this scope has no quality scoring data yet.</div>'
+        : "");
+
+      var issues = Array.isArray(pc.top_issues) ? pc.top_issues.slice(0, 3) : [];
+      function impactBadge(impact) {
+        var cls = impact === "high" ? "impact-high" : impact === "medium" ? "impact-medium" : "impact-low";
+        return '<span class="impact-badge ' + cls + '">' + escapeHtml(impact || "low") + '</span>';
+      }
+      var issuesHtml = issues.length ? issues.map(function(issue) {
+        var evidence = Array.isArray(issue.evidence) ? issue.evidence : [];
+        var evidenceHtml = evidence.map(function(item) {
+          var sid = Number(item && item.session_id);
+          var mid = Number(item && item.message_id);
+          if (!(sid > 0 && mid > 0)) return "";
+          var href = "/session?session_id=" + encodeURIComponent(String(sid)) + "&message_id=" + encodeURIComponent(String(mid));
+          return '<div class="bullet-note">Evidence: <a class="evidence-link" href="' + href + '">Session ' + escapeHtml(String(sid)) + ", message " + escapeHtml(String(mid)) + "</a></div>";
+        }).join("");
+        return '<div class="section-card">' +
+          '<div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.45rem;">' +
+            '<h3 style="margin:0;">' + escapeHtml(issue.issue || "") + '</h3>' +
+            '<span class="chip">' + formatNumber(issue.frequency || 0) + 'x</span>' +
+            impactBadge(issue.impact) +
+          '</div>' +
+          '<p>' + escapeHtml(issue.why_it_hurts || "") + '</p>' +
+          evidenceHtml +
+        '</div>';
+      }).join("") : '<div class="empty">No top issues recorded.</div>';
+
+      var playbooks = Array.isArray(pc.playbooks) ? pc.playbooks : [];
+      var playbooksHtml = playbooks.map(function(pb, pbIdx) {
+        var checklist = Array.isArray(pb.checklist) ? pb.checklist : [];
+        var variants = ['short', 'deep', 'token_lean'];
+        var variantLabels = { short: 'Short', deep: 'Deep', token_lean: 'Token-Lean' };
+        var uid = 'pb-' + pbIdx;
+        var btnHtml = variants.map(function(variant, vi) {
+          var activeClass = vi === 0 ? " active" : "";
+          var contentId = uid + '-' + variant;
+          return '<button type="button" class="rewrite-tab-btn' + activeClass + '" onclick="(function(btn){var p=btn.closest(\'.rewrite-tabs\');p.querySelectorAll(\'.rewrite-tab-btn\').forEach(function(b){b.classList.remove(\'active\')});p.querySelectorAll(\'.rewrite-tab-content\').forEach(function(c){c.style.display=\'none\'});btn.classList.add(\'active\');document.getElementById(\'' + contentId + '\').style.display=\'block\'})(this)">' + variantLabels[variant] + '</button>';
+        }).join("");
+        var contentHtml = variants.map(function(variant, vi) {
+          var contentId = uid + '-' + variant;
+          return '<div class="rewrite-tab-content" id="' + contentId + '" style="' + (vi === 0 ? '' : 'display:none') + '">' +
+            codeBlock(pb['rewrite_' + variant] || "") +
+          '</div>';
+        }).join("");
+        var checklistHtml = checklist.length
+          ? '<ul class="mini-list">' + checklist.map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join("") + '</ul>'
+          : '';
+        return '<div class="playbook-card">' +
+          '<h3>' + escapeHtml(pb.name || "") + '</h3>' +
+          '<p><strong>When to use:</strong> ' + escapeHtml(pb.when_to_use || "") + '</p>' +
+          '<div class="rewrite-tabs">' + btnHtml + contentHtml + '</div>' +
+          checklistHtml +
+          (pb.token_budget_hint ? '<p style="margin-top:0.5rem;color:var(--muted);font-size:0.88rem;">' + escapeHtml(pb.token_budget_hint) + '</p>' : '') +
+          (pb.expected_gain ? '<p style="margin-top:0.3rem;"><strong>Expected gain:</strong> ' + escapeHtml(pb.expected_gain) + '</p>' : '') +
+        '</div>';
+      }).join("");
+
+      var nextPlan = Array.isArray(pc.next_week_plan) ? pc.next_week_plan : [];
+      var nextPlanHtml = nextPlan.length
+        ? '<ol class="next-plan-list">' + nextPlan.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join("") + '</ol>'
+        : '';
+
+      return '<div class="section-card"><h3>Prompt Quality KPIs</h3>' + kpiHtml + '</div>' +
+        '<div class="section-card"><h3>Top Issues</h3>' + issuesHtml + '</div>' +
+        (playbooksHtml ? '<div class="section-card"><h3>Playbooks</h3>' + playbooksHtml + '</div>' : '') +
+        (nextPlanHtml ? '<div class="section-card"><h3>Next-Week Plan</h3>' + nextPlanHtml + '</div>' : '');
+    }
+
     function renderDetailTab(tab, details) {
       if (tab === "at_a_glance") return renderAtGlance(insightState.currentReport || {}, details);
       if (tab === "what_you_work_on") return renderWhatYouWorkOn(details);
       if (tab === "how_you_use_ai") return renderHowYouUseAI(details);
       if (tab === "impressive_things") return renderImpressive(details);
       if (tab === "where_things_go_wrong") return renderWhereWrong(details);
+      if (tab === "prompt_coach") return renderPromptCoach(details);
       if (tab === "features_to_try") return renderFeatures(details);
       return renderHorizon(details);
     }
@@ -282,6 +391,7 @@ export const insightsReportsScriptDetail = `
             { key: "how_you_use_ai", label: "How You Use AI" },
             { key: "impressive_things", label: "Impressive Things" },
             { key: "where_things_go_wrong", label: "Where Things Go Wrong" },
+            { key: "prompt_coach", label: "Prompt Coach" },
             { key: "features_to_try", label: "Features to Try" },
             { key: "on_the_horizon", label: "On the Horizon" }
           ];

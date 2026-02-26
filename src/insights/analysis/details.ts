@@ -1,4 +1,4 @@
-import type { InsightDetails, LabeledCount, ProblemCard, TopicCard } from "../types/index.js";
+import type { InsightDetails, LabeledCount, ProblemCard, PromptCoach, TopicCard } from "../types/index.js";
 
 export interface BuildInsightDetailsInput {
   sessionCount: number;
@@ -20,6 +20,7 @@ export interface BuildInsightDetailsInput {
   hinderingBody: string;
   quickWinsBody: string;
   ambitiousBody: string;
+  prompt_coach: PromptCoach;
 }
 
 export function buildInsightDetails(input: BuildInsightDetailsInput): InsightDetails {
@@ -142,5 +143,6 @@ export function buildInsightDetails(input: BuildInsightDetailsInput): InsightDet
         },
       ],
     },
+    prompt_coach: input.prompt_coach,
   };
 }

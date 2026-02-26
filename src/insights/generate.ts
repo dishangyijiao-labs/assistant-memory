@@ -1,21 +1,28 @@
 import type { InsightMessage } from "../storage/db.js";
+import type { QualityKpiSnapshot, LowQualityQuestion } from "../storage/queries/quality.js";
 import { localAnalysis } from "./analysis/core.js";
 import { buildEvidence } from "./analysis/evidence.js";
 import { externalRewrite } from "./llm/client.js";
 import { runAgentLoop } from "./agent/runner.js";
 import type { InsightGenerationResult, InsightModelConfig } from "./types/index.js";
 
+export interface QualityContext {
+  kpi: QualityKpiSnapshot;
+  topLowQualityQuestions: LowQualityQuestion[];
+}
+
 export type { InsightGenerationResult, InsightModelConfig, InsightDetails } from "./types/index.js";
 
 export async function generateInsight(
   messages: InsightMessage[],
-  model: InsightModelConfig
+  model: InsightModelConfig,
+  qualityContext?: QualityContext
 ): Promise<InsightGenerationResult> {
   if (messages.length === 0) {
     throw new Error("INSIGHT_INPUT_EMPTY");
   }
 
-  const local = localAnalysis(messages);
+  const local = localAnalysis(messages, qualityContext);
   let summary = local.summary;
   let patterns = [...local.patterns];
   let feedback = [...local.feedback];
@@ -25,6 +32,9 @@ export async function generateInsight(
     summary = external.summary || summary;
     patterns = external.patterns.length > 0 ? external.patterns : patterns;
     feedback = external.feedback.length > 0 ? external.feedback : feedback;
+    if (external.prompt_coach) {
+      local.details.prompt_coach = external.prompt_coach;
+    }
   } else if (model.mode === "agent" && model.baseUrl && model.modelName && model.apiKey) {
     const sessionIds = [...new Set(messages.map((m) => m.session_id))];
     const userPrompt = [
