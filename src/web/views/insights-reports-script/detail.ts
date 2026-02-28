@@ -317,7 +317,7 @@ export const insightsReportsScriptDetail = `
         var btnHtml = variants.map(function(variant, vi) {
           var activeClass = vi === 0 ? " active" : "";
           var contentId = uid + '-' + variant;
-          return '<button type="button" class="rewrite-tab-btn' + activeClass + '" onclick="(function(btn){var p=btn.closest(\'.rewrite-tabs\');p.querySelectorAll(\'.rewrite-tab-btn\').forEach(function(b){b.classList.remove(\'active\')});p.querySelectorAll(\'.rewrite-tab-content\').forEach(function(c){c.style.display=\'none\'});btn.classList.add(\'active\');document.getElementById(\'' + contentId + '\').style.display=\'block\'})(this)">' + variantLabels[variant] + '</button>';
+          return '<button type="button" class="rewrite-tab-btn' + activeClass + '" onclick="(function(btn){var p=btn.closest(\\'.rewrite-tabs\\');p.querySelectorAll(\\'.rewrite-tab-btn\\').forEach(function(b){b.classList.remove(\\'active\\')});p.querySelectorAll(\\'.rewrite-tab-content\\').forEach(function(c){c.style.display=\\'none\\'});btn.classList.add(\\'active\\');document.getElementById(\\'' + contentId + '\\').style.display=\\'block\\'})(this)">' + variantLabels[variant] + '</button>';
         }).join("");
         var contentHtml = variants.map(function(variant, vi) {
           var contentId = uid + '-' + variant;
