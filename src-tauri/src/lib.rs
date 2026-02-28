@@ -39,7 +39,14 @@ fn resolve_backend_entry(app: &tauri::AppHandle) -> PathBuf {
     PathBuf::from("dist").join("index.js")
 }
 
-fn find_node() -> PathBuf {
+fn find_node(app: &tauri::AppHandle) -> PathBuf {
+    // Prefer the bundled node binary (compiled to match bundled native addons).
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let bundled = resource_dir.join("resources").join("bundled-node").join("node");
+        if bundled.exists() {
+            return bundled;
+        }
+    }
     // GUI apps on macOS get a restricted PATH that excludes Homebrew and nvm.
     // Search known locations before falling back to whatever is on PATH.
     let candidates = [
@@ -65,7 +72,7 @@ fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
         .to_str()
         .ok_or_else(|| "backend entry path is not valid UTF-8".to_string())?
         .to_string();
-    let node = find_node();
+    let node = find_node(app);
     let log_path = std::env::var("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
