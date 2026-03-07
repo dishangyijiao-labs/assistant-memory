@@ -144,13 +144,14 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
       }
 
       if (Array.isArray(req.messages)) {
+        let msgIdx = 0;
         for (const msg of req.messages as Array<Record<string, unknown>>) {
-          const msgRole = normalizeRole(msg.role as string | undefined);
-          if (!msgRole) continue;
+          const msgRole = normalizeRole(msg.role as string | undefined) ?? "assistant";
           const msgText = copilotText(msg.content ?? msg.message ?? msg.text ?? msg);
           if (msgText.trim()) {
             const msgId = (msg.id ?? msg.messageId) as string | undefined;
-            messages.push({ role: msgRole, content: msgText.trim(), timestamp, external_id: msgId });
+            messages.push({ role: msgRole, content: msgText.trim(), timestamp: timestamp + msgIdx, external_id: msgId });
+            msgIdx++;
           }
         }
         continue;
@@ -162,7 +163,7 @@ function parseCopilotSession(json: string, workspaceHash: string): RawSession | 
       }
       const response = copilotText(req.response ?? req.output ?? req.content ?? req.text ?? "");
       if (response.trim()) {
-        messages.push({ role: "assistant", content: response.trim(), timestamp, external_id: reqExternalId ? `${reqExternalId}-response` : undefined });
+        messages.push({ role: "assistant", content: response.trim(), timestamp: timestamp + 1, external_id: reqExternalId ? `${reqExternalId}-response` : undefined });
       }
     }
 
