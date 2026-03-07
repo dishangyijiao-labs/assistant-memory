@@ -122,6 +122,11 @@ export interface InsightDetails {
   prompt_coach?: PromptCoach;
 }
 
+export interface ReflectionPrompt {
+  question: string;
+  hint: string;
+}
+
 export interface InsightGenerationResult {
   title: string;
   summary: string;
@@ -139,6 +144,7 @@ export interface InsightGenerationResult {
   snippetCount: number;
   sources: string[];
   evidence: InsightEvidenceInput[];
+  reflections: ReflectionPrompt[];
 }
 
 export interface LocalAnalysis {

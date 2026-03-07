@@ -231,7 +231,7 @@ export function createHandler() {
             summaryMd: insight.summary,
             patternsJson: JSON.stringify(insight.patterns),
             feedbackJson: JSON.stringify(insight.feedback),
-            detailsJson: JSON.stringify(insight.details),
+            detailsJson: JSON.stringify({ ...insight.details, reflections: insight.reflections }),
             sessionCount: insight.sessionCount,
             messageCount: insight.messageCount,
             snippetCount: insight.snippetCount,
@@ -253,6 +253,7 @@ export function createHandler() {
             feedback: insight.feedback,
             scores: insight.scores,
             score_reasons: insight.scoreReasons,
+            reflections: insight.reflections,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Insights generation failed";

@@ -2,6 +2,7 @@ import type { InsightMessage } from "../storage/db.js";
 import type { QualityKpiSnapshot, LowQualityQuestion } from "../storage/queries/quality.js";
 import { localAnalysis } from "./analysis/core.js";
 import { buildEvidence } from "./analysis/evidence.js";
+import { generateReflectionPrompts } from "./analysis/reflection.js";
 import { externalRewrite } from "./llm/client.js";
 import { runAgentLoop } from "./agent/runner.js";
 import type { InsightGenerationResult, InsightModelConfig } from "./types/index.js";
@@ -61,6 +62,7 @@ export async function generateInsight(
   }
 
   const evidence = buildEvidence(messages, patterns, feedback, local.scoreReasons);
+  const reflections = generateReflectionPrompts(local.prompt_coach.top_issues);
   return {
     title: local.title,
     summary,
@@ -74,5 +76,6 @@ export async function generateInsight(
     snippetCount: local.snippetCount,
     sources: local.sources,
     evidence,
+    reflections,
   };
 }
