@@ -1,15 +1,6 @@
 import { getDb } from "../db-core.js";
 import { SOURCES, type NormalizedSession, type Source } from "../types.js";
-
-function sanitizeFtsQuery(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '""';
-  const cleaned = trimmed.replace(/["""*(){}[\]^~:;!@#$%&\\|/<>]/g, " ").trim();
-  if (!cleaned) return '""';
-  const tokens = cleaned.split(/\s+/).filter((t) => t.length > 0);
-  if (tokens.length === 0) return '""';
-  return '"' + tokens.join(" ") + '"';
-}
+import { sanitizeFtsQuery } from "../utils.js";
 
 export function upsertSession(s: NormalizedSession): number {
   const database = getDb();
