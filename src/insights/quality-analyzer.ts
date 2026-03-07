@@ -183,13 +183,15 @@ export async function analyzeOneMessage(
 
 /**
  * Analyze all user messages in the given session. Uses existing model settings.
+ * Already-scored messages are skipped unless `force` is true.
  */
 export async function analyzeSession(
   sessionId: number,
-  config: QualityAnalyzerConfig
-): Promise<{ analyzed: number; failed: number }> {
+  config: QualityAnalyzerConfig,
+  opts?: { force?: boolean }
+): Promise<{ analyzed: number; skipped: number; failed: number }> {
   const detail = db.getSessionDetail(sessionId, 5000, 0, "asc");
-  if (!detail) return { analyzed: 0, failed: 0 };
+  if (!detail) return { analyzed: 0, skipped: 0, failed: 0 };
 
   const userMessages = extractUserMessagesWithContext(
     detail.messages.map((m) => ({ id: m.id, session_id: sessionId, role: m.role, content: m.content })),
@@ -197,9 +199,19 @@ export async function analyzeSession(
     detail.session.source || ""
   );
 
+  const force = opts?.force === true;
+  const existingScores = force
+    ? new Map()
+    : db.getQualityScoresByMessageIds(userMessages.map((m) => m.messageId));
+
   let analyzed = 0;
+  let skipped = 0;
   let failed = 0;
   for (const msg of userMessages) {
+    if (!force && existingScores.has(msg.messageId)) {
+      skipped += 1;
+      continue;
+    }
     try {
       await analyzeOneMessage(msg, config);
       analyzed += 1;
@@ -207,5 +219,5 @@ export async function analyzeSession(
       failed += 1;
     }
   }
-  return { analyzed, failed };
+  return { analyzed, skipped, failed };
 }
