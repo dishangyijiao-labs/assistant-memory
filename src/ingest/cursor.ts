@@ -214,14 +214,6 @@ function normalizeCursorRole(role: string | undefined, isUser?: boolean): "user"
   return null;
 }
 
-function contentSuggestsUser(content: string): boolean {
-  const c = content.trim();
-  if (c.length < 10) return false;
-  if (c.includes("If uncertain, prefer asking precise follow-up questions")) return true;
-  if (c.includes("我想") || c.includes("我希望") || c.includes("你基于") || c.includes("你从")) return true;
-  if (c.includes("请") && (c.includes("？") || c.includes("?"))) return true;
-  return false;
-}
 
 function extractContent(obj: Record<string, unknown>): string {
   if (typeof obj.content === "string") return obj.content;
@@ -263,15 +255,10 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
         if (c) messages.push({ role: "user", content: c, timestamp: tsPrompt });
       }
       if (typeof response === "string" && response.trim()) {
-        const r = response.trim();
-        const role = contentSuggestsUser(r) ? "user" : "assistant";
-        messages.push({ role, content: r, timestamp: tsResponse });
+        messages.push({ role: "assistant", content: response.trim(), timestamp: tsResponse });
       } else if (response && typeof response === "object") {
         const c = extractContent(response as Record<string, unknown>);
-        if (c) {
-          const role = contentSuggestsUser(c) ? "user" : "assistant";
-          messages.push({ role, content: c, timestamp: tsResponse });
-        }
+        if (c) messages.push({ role: "assistant", content: c, timestamp: tsResponse });
       }
     }
     if (messages.length > 0) return messages;
@@ -293,9 +280,6 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
     let roleNorm = normalizeCursorRole(roleRaw, isUser);
     if (roleNorm === null) {
       roleNorm = lastRole === "user" ? "assistant" : "user";
-    }
-    if (roleNorm === "assistant" && contentSuggestsUser(content)) {
-      roleNorm = "user";
     }
     lastRole = roleNorm;
     const ts = parseTimestamp(obj, baseTs - (items.length - i) * 1000);
