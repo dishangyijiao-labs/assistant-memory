@@ -47,9 +47,16 @@ export function createHandler() {
       const path = url.split("?")[0];
       const userAgent = req.headers["user-agent"] ?? "-";
 
-      // Allow Tauri WebView (tauri://localhost) and local origins to access the API.
-      const origin = req.headers.origin;
-      if (origin) {
+      // Allow only local origins: localhost, 127.0.0.1, and Tauri WebView.
+      const origin = req.headers.origin ?? "";
+      const ALLOWED_ORIGINS = [
+        "http://localhost:3939",
+        "http://127.0.0.1:3939",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "tauri://localhost",
+      ];
+      if (ALLOWED_ORIGINS.includes(origin)) {
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type");
