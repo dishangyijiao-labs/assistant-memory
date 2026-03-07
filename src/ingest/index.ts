@@ -12,34 +12,50 @@ export interface IngestOptions {
   sources?: Array<"cursor" | "cursor-cli" | "copilot" | "claude-code" | "codex" | "gemini">;
 }
 
-export function runIngest(options: IngestOptions = {}): { sessions: number; messages: number } {
+export interface SourceResult {
+  source: string;
+  sessions: number;
+  error?: string;
+}
+
+export interface IngestResult {
+  sessions: number;
+  messages: number;
+  sourceResults: SourceResult[];
+}
+
+function log(msg: string): void {
+  process.stderr.write(`[assistmem] ${msg}\n`);
+}
+
+function collectSource(
+  name: string,
+  fn: () => RawSession[],
+  all: RawSession[],
+  results: SourceResult[]
+): void {
+  try {
+    const sessions = fn();
+    all.push(...sessions);
+    results.push({ source: name, sessions: sessions.length });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    log(`${name}: ${error}`);
+    results.push({ source: name, sessions: 0, error });
+  }
+}
+
+export function runIngest(options: IngestOptions = {}): IngestResult {
   const sources = options.sources ?? ["cursor", "cursor-cli", "copilot", "claude-code", "codex", "gemini"];
   const all: RawSession[] = [];
+  const sourceResults: SourceResult[] = [];
 
-  if (sources.includes("cursor")) {
-    const s = ingestCursor();
-    all.push(...s);
-  }
-  if (sources.includes("cursor-cli")) {
-    const s = ingestCursorCli();
-    all.push(...s);
-  }
-  if (sources.includes("copilot")) {
-    const s = ingestCopilot();
-    all.push(...s);
-  }
-  if (sources.includes("claude-code")) {
-    const s = ingestClaudeCode();
-    all.push(...s);
-  }
-  if (sources.includes("codex")) {
-    const s = ingestCodex();
-    all.push(...s);
-  }
-  if (sources.includes("gemini")) {
-    const s = ingestGemini();
-    all.push(...s);
-  }
+  if (sources.includes("cursor")) collectSource("cursor", ingestCursor, all, sourceResults);
+  if (sources.includes("cursor-cli")) collectSource("cursor-cli", ingestCursorCli, all, sourceResults);
+  if (sources.includes("copilot")) collectSource("copilot", ingestCopilot, all, sourceResults);
+  if (sources.includes("claude-code")) collectSource("claude-code", ingestClaudeCode, all, sourceResults);
+  if (sources.includes("codex")) collectSource("codex", ingestCodex, all, sourceResults);
+  if (sources.includes("gemini")) collectSource("gemini", ingestGemini, all, sourceResults);
 
   const database = db.getDb();
   database.exec("BEGIN");
@@ -73,5 +89,6 @@ export function runIngest(options: IngestOptions = {}): { sessions: number; mess
     throw e;
   }
 
-  return db.getStats();
+  const stats = db.getStats();
+  return { ...stats, sourceResults };
 }
