@@ -409,6 +409,9 @@ export const searchPageScript = `
             return;
           }
           var list = data.sessions || [];
+          var total = typeof data.total === "number" ? data.total : list.length;
+          var countEl = document.getElementById("session-count");
+          if (countEl) countEl.textContent = total > 0 ? total + " sessions" : "";
           currentSessions = list;
           loadedOffset = list.length;
           hasMoreSessions = list.length >= batchSize;
