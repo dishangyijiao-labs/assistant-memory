@@ -134,7 +134,7 @@ export default function SettingsPage() {
           <Link className="back-link" to="/">
             &larr; Back
           </Link>
-          <h1 className="page-title">Advanced</h1>
+          <h1 className="page-title">Advanced Settings</h1>
           <p className="page-sub">
             Data source paths and low-frequency local configuration. Daily sync
             runs from Home.
@@ -146,7 +146,7 @@ export default function SettingsPage() {
 
           <section>
             <div className="section-head">
-              <h2 className="section-title">Connected Tools</h2>
+              <h2 className="section-title">Data Sources</h2>
               <span className="count-chip">
                 {formatNumber(activeSources)} enabled
               </span>

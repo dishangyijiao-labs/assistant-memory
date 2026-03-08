@@ -5,6 +5,7 @@ import { sendError } from "./utils/http.js";
 import * as ingestRoutes from "./routes/ingest.js";
 import * as settingsRoutes from "./routes/settings.js";
 import * as sessionsRoutes from "./routes/sessions.js";
+import * as integrationsRoutes from "./routes/integrations.js";
 
 const DEFAULT_PORT = 3939;
 
@@ -58,6 +59,7 @@ export function createHandler() {
       if (path === "/api/session") return await sessionsRoutes.handleGetSession(req, res, url);
       if (path === "/api/workspaces") return await sessionsRoutes.handleWorkspaces(req, res, url);
       if (path === "/api/stats") return await sessionsRoutes.handleStats(req, res);
+      if (path === "/api/integrations") return await integrationsRoutes.handleGetIntegrations(req, res);
       if (path === "/api/settings/sources") return await settingsRoutes.handleGetSources(req, res);
       if (path === "/api/settings/model") return await settingsRoutes.handleGetModel(req, res);
 

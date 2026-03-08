@@ -57,6 +57,66 @@ npx assistmem serve --port 4000
 
 Open `http://localhost:3939` by default.
 
+### MCP Server
+
+AssistMem exposes an MCP (Model Context Protocol) server so AI clients like Claude Code can query your local chat history for context.
+
+```bash
+npx assistmem mcp
+npx assistmem mcp --client claude-code
+```
+
+The `--client` flag identifies which AI client is using the MCP server. This is used for usage tracking visible on the Integrations page. If omitted, the server tries to auto-detect the client from environment variables.
+
+This starts a stdio-based MCP server with one tool:
+
+- **`get_relevant_context`** — Search local chat history and return up to 3 relevant snippets.
+  - `query` (string, required): Search query
+  - `workspaceHint` (string, optional): Workspace path hint for boosting relevance
+
+#### Claude Code setup
+
+Add to your Claude Code MCP config (`~/.claude.json` or project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "assistmem": {
+      "command": "npx",
+      "args": ["assistmem", "mcp", "--client", "claude-code"]
+    }
+  }
+}
+```
+
+#### Cursor setup
+
+Add to Cursor's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "assistmem": {
+      "command": "npx",
+      "args": ["assistmem", "mcp", "--client", "cursor"]
+    }
+  }
+}
+```
+
+### Integrations Page
+
+The web UI includes an **Integrations** page (`/integrations`) that shows:
+
+- **MCP Tools** — the tools exposed by the AssistMem MCP server
+- **AI Clients** — supported clients with setup instructions and usage status
+  - **Supported**: the client is known to work with AssistMem MCP
+  - **Configured**: the client has actually used the MCP server (based on logged calls)
+  - **Last used**: when the client last called an MCP tool
+- **Data Sources** — summary of ingested chat history sources (details in Advanced Settings)
+
+The Integrations page is accessible from the sidebar on the main search page.
+
 ### Desktop App (macOS)
 
 See [DESKTOP.md](DESKTOP.md) for full instructions.

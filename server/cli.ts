@@ -78,6 +78,15 @@ program
     console.log("\nRun 'npx assistmem index' then refresh the session page to apply role fixes.");
   });
 
+program
+  .command("mcp")
+  .description("Start MCP server (stdio transport) for AI client integration.")
+  .option("--client <name>", "Identify the AI client (e.g. claude-code, cursor)")
+  .action(async (opts: { client?: string }) => {
+    const { startMcpServer } = await import("./mcp/server.js");
+    await startMcpServer(opts.client);
+  });
+
 export function run(): void {
   program.parse(process.argv);
 }

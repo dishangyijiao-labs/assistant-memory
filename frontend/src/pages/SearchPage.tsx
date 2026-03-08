@@ -598,6 +598,12 @@ export default function SearchPage() {
             {renderSessionList()}
           </div>
           <div className="sidebar-foot">
+            <button type="button" className="btn-settings" onClick={() => navigate("/integrations")} title="Integrations">
+              <svg viewBox="0 0 16 16" fill="currentColor">
+                <path d="M6 0a2 2 0 0 0-2 2H2a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1h1v2H1a1 1 0 0 0-1 1v1a2 2 0 0 0 2 2h2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1v-1h2v1a1 1 0 0 0 1 1h1a2 2 0 0 0 2-2h2a2 2 0 0 0 2-2V9a1 1 0 0 0-1-1h-1V6h1a1 1 0 0 0 1-1V4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9a1 1 0 0 0-1 1v1H8V1a1 1 0 0 0-1-1zm0 2a1 1 0 0 1 1-1h1v2H6zm4 0V1h1a1 1 0 0 1 1 1H10zM2 4h12a1 1 0 0 1 1 1H1a1 1 0 0 1 1-1m0 3h2v2H2zm10 0h2v2h-2zm-5 5V10h2v2z"/>
+              </svg>
+              <span className="settings-label">Integrations</span>
+            </button>
             <button type="button" className="btn-settings" onClick={() => navigate("/advanced")} title="Advanced">
               <svg viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />

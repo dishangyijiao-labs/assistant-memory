@@ -1,0 +1,244 @@
+/* Integrations page */
+.integrations-page {
+  max-width: 1160px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 1.4rem;
+}
+
+.integrations-page .back-link {
+  display: inline-block;
+  font-size: 0.86rem;
+  color: var(--accent);
+  margin-bottom: 0.6rem;
+  text-decoration: none;
+}
+.integrations-page .back-link:hover {
+  text-decoration: underline;
+}
+
+.integrations-page .main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  min-height: 560px;
+}
+
+.integrations-page .page-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.integrations-page .page-sub {
+  margin: 0.4rem 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+/* Section */
+.integrations-page .section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+  margin-top: 1.2rem;
+}
+
+.integrations-page .section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Cards */
+.integrations-page .card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+}
+
+.integrations-page .card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.72rem;
+}
+
+.integrations-page .card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.integrations-page .card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.integrations-page .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.integrations-page .card-desc {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Badges */
+.integrations-page .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.integrations-page .badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.48rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.integrations-page .badge.supported {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.integrations-page .badge.configured {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.integrations-page .badge.last-used {
+  background: #f9fafb;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* Card meta */
+.integrations-page .card-meta {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Config snippet */
+.integrations-page .config-toggle {
+  margin-top: 0.5rem;
+}
+
+.integrations-page .config-toggle button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: #fff;
+  color: var(--text);
+}
+.integrations-page .config-toggle button:hover {
+  border-color: var(--accent);
+}
+
+.integrations-page .config-block {
+  margin-top: 0.4rem;
+  position: relative;
+}
+
+.integrations-page .config-block pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.integrations-page .copy-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+.integrations-page .copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Tool card */
+.integrations-page .tool-params {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.integrations-page .tool-params code {
+  background: #f1f5f9;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+/* Summary card */
+.integrations-page .summary-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.integrations-page .summary-stats {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.integrations-page .summary-link {
+  font-size: 0.82rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+.integrations-page .summary-link:hover {
+  text-decoration: underline;
+}
+
+/* Loading */
+.integrations-page .loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}
+
+.integrations-page .error {
+  color: var(--error);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}
