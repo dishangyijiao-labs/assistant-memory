@@ -52,8 +52,6 @@ export function createHandler() {
       const ALLOWED_ORIGINS = [
         "http://localhost:3939",
         "http://127.0.0.1:3939",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
         "tauri://localhost",
       ];
       if (ALLOWED_ORIGINS.includes(origin)) {
