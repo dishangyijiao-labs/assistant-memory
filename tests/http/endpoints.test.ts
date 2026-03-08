@@ -133,47 +133,6 @@ describe("serve command HTTP endpoints", () => {
     });
   });
 
-  describe("GET /api/insights/quality-kit", () => {
-    it("returns analyzer config and report template", async () => {
-      const { status, body } = await fetchJson(port, "/api/insights/quality-kit");
-      assert.equal(status, 200);
-      assert.ok(body.analyzer);
-      assert.ok(body.analyzer.system_prompt);
-      assert.ok(body.analyzer.output_schema);
-      assert.ok(body.daily_report);
-      assert.ok(body.daily_report.markdown_template);
-      assert.ok(Array.isArray(body.daily_report.metrics));
-    });
-  });
-
-  describe("GET /api/quality/kpi", () => {
-    it("returns 400 when session_ids is missing", async () => {
-      const { status, body } = await fetchJson(port, "/api/quality/kpi");
-      assert.equal(status, 400);
-      assert.equal(body.error.code, "INVALID_ARGUMENT");
-    });
-
-    it("returns KPI for valid session IDs (empty data)", async () => {
-      const { status, body } = await fetchJson(port, "/api/quality/kpi?session_ids=1,2,3");
-      assert.equal(status, 200);
-      assert.equal(typeof body.scored_question_count, "number");
-    });
-  });
-
-  describe("GET /api/growth", () => {
-    it("returns growth data for default range", async () => {
-      const { status, body } = await fetchJson(port, "/api/growth");
-      assert.equal(status, 200);
-      assert.ok(Array.isArray(body.data));
-    });
-
-    it("supports range parameter", async () => {
-      const { status, body } = await fetchJson(port, "/api/growth?range=7d");
-      assert.equal(status, 200);
-      assert.ok(Array.isArray(body.data));
-    });
-  });
-
   describe("HTML pages", () => {
     it("serves search page at /", async () => {
       const { status, contentType } = await fetchText(port, "/");
@@ -187,20 +146,8 @@ describe("serve command HTTP endpoints", () => {
       assert.ok(contentType.includes("text/html"));
     });
 
-    it("serves insights page at /insights", async () => {
-      const { status, contentType } = await fetchText(port, "/insights");
-      assert.equal(status, 200);
-      assert.ok(contentType.includes("text/html"));
-    });
-
     it("serves settings page at /settings", async () => {
       const { status, contentType } = await fetchText(port, "/settings");
-      assert.equal(status, 200);
-      assert.ok(contentType.includes("text/html"));
-    });
-
-    it("serves growth page at /growth", async () => {
-      const { status, contentType } = await fetchText(port, "/growth");
       assert.equal(status, 200);
       assert.ok(contentType.includes("text/html"));
     });
@@ -264,15 +211,6 @@ describe("serve command HTTP endpoints", () => {
       assert.ok(typeof body.sessions === "number");
       assert.ok(typeof body.messages === "number");
       assert.ok(Array.isArray(body.sources));
-    });
-
-    it("DELETE /api/insights/999 returns 404 for non-existent report", async () => {
-      const res = await fetch(`http://127.0.0.1:${port}/api/insights/999`, {
-        method: "DELETE",
-      });
-      const body = await res.json();
-      assert.equal(res.status, 404);
-      assert.equal(body.error.code, "NOT_FOUND");
     });
   });
 });

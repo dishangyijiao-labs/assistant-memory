@@ -35,20 +35,11 @@ interface SourcesPayload {
   db_path?: string;
 }
 
-interface ModelPayload {
-  settings: {
-    external_enabled: boolean;
-    [key: string]: unknown;
-  };
-  has_api_key?: boolean;
-}
-
 export default function SettingsPage() {
   const [sources, setSources] = useState<SourceEntry[]>([]);
   const [activeSources, setActiveSources] = useState(0);
   const [statusText, setStatusText] = useState("");
   const [statusKind, setStatusKind] = useState<"" | "ok" | "warn" | "err">("");
-  const [insightsApiStatus, setInsightsApiStatus] = useState("External API: unknown");
   const [editingSource, setEditingSource] = useState<string | null>(null);
   const [editMode, setEditMode] = useState("local_files");
   const [editPath, setEditPath] = useState("");
@@ -76,21 +67,9 @@ export default function SettingsPage() {
       });
   }, [setStatus]);
 
-  const loadModelStatus = useCallback(() => {
-    api<ModelPayload>("/api/settings/model")
-      .then((payload) => {
-        const enabled = !!payload.settings?.external_enabled;
-        setInsightsApiStatus("External API: " + (enabled ? "Enabled" : "Disabled"));
-      })
-      .catch(() => {
-        setInsightsApiStatus("External API: unavailable");
-      });
-  }, []);
-
   useEffect(() => {
     loadSourceSettings();
-    loadModelStatus();
-  }, [loadSourceSettings, loadModelStatus]);
+  }, [loadSourceSettings]);
 
   const handleToggle = useCallback(
     (source: string, enabled: boolean) => {
@@ -270,14 +249,6 @@ export default function SettingsPage() {
                   </div>
                 );
               })}
-            </div>
-
-            <div className="section-card">
-              <h3>Insights API</h3>
-              <div className="muted">{insightsApiStatus}</div>
-              <div className="row">
-                <Link to="/insights/new">Open Insights Setup</Link>
-              </div>
             </div>
 
             <div className="footer-note">

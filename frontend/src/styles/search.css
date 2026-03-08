@@ -295,30 +295,6 @@
   align-items: center;
   justify-content: space-between;
 }
-.btn-insights {
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  text-decoration: none;
-  border-radius: 6px;
-  transition: color 0.12s, background 0.12s;
-}
-.btn-insights:hover {
-  color: var(--text);
-  background: var(--border);
-}
-.btn-insights svg {
-  width: 14px;
-  height: 14px;
-}
 .btn-settings {
   background: none;
   border: none;
@@ -459,30 +435,6 @@ a.action-btn {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.3rem;
-}
-.bubble-wrap .quality-badge {
-  font-size: 0.68rem;
-  padding: 0.12rem 0.35rem;
-  border-radius: 4px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.bubble-wrap .quality-badge.quality-a,
-.bubble-wrap .quality-badge.quality-b {
-  background: #d1fae5;
-  color: #065f46;
-}
-.bubble-wrap .quality-badge.quality-c {
-  background: #fef3c7;
-  color: #92400e;
-}
-.bubble-wrap .quality-badge.quality-d,
-.bubble-wrap .quality-badge.quality-f {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.bubble-wrap .quality-badge:hover {
-  opacity: 0.85;
 }
 .bubble-user {
   background: var(--user-bubble);

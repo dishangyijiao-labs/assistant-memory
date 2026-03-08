@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "child_process";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "fs";
+import { mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -51,85 +51,6 @@ describe("CLI – extended coverage", () => {
       const { stdout, exitCode } = runCli(["search", "test", "-n", "abc"], { ASSISTMEM_DB_PATH: dbPath });
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes("No matches"));
-    });
-  });
-
-  describe("quality-report – days and limit clamping", () => {
-    it("clamps days to min 1", () => {
-      const { stdout } = runCli(["quality-report", "-d", "0"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.length > 0, "should produce output");
-      assert.ok(stdout.includes("Daily Prompt Quality Report"));
-    });
-
-    it("clamps days to max 30", () => {
-      const { stdout } = runCli(["quality-report", "-d", "999"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Daily Prompt Quality Report"));
-    });
-
-    it("clamps limit to min 1", () => {
-      const { stdout } = runCli(["quality-report", "-n", "0"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Daily Prompt Quality Report"));
-    });
-
-    it("clamps limit to max 50", () => {
-      const { stdout } = runCli(["quality-report", "-n", "999"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Daily Prompt Quality Report"));
-    });
-
-    it("writes to file with --output", () => {
-      const outPath = join(tempDir, "report.md");
-      const { stderr } = runCli(["quality-report", "-o", outPath], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stderr.includes("Report written to"));
-      assert.ok(existsSync(outPath));
-      const content = readFileSync(outPath, "utf-8");
-      assert.ok(content.includes("Daily Prompt Quality Report"));
-    });
-
-    it("includes date in report header", () => {
-      const { stdout } = runCli(["quality-report"], { ASSISTMEM_DB_PATH: dbPath });
-      // Should contain today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().slice(0, 10);
-      assert.ok(stdout.includes(today));
-    });
-
-    it("includes KPI section", () => {
-      const { stdout } = runCli(["quality-report"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("KPI Snapshot"));
-      assert.ok(stdout.includes("follow-up rounds"));
-      assert.ok(stdout.includes("First-pass resolution"));
-    });
-
-    it("includes placeholder sections for empty data", () => {
-      const { stdout } = runCli(["quality-report"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("(no low-quality questions)") || stdout.includes("Low-Quality Questions"));
-      assert.ok(stdout.includes("(patterns not yet implemented)"));
-    });
-  });
-
-  describe("eval-report – days clamping", () => {
-    it("clamps days to min 1", () => {
-      const { stdout } = runCli(["eval-report", "-d", "0"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Eval"));
-    });
-
-    it("clamps days to max 365", () => {
-      const { stdout } = runCli(["eval-report", "-d", "9999"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Eval"));
-    });
-
-    it("outputs table format", () => {
-      const { stdout } = runCli(["eval-report"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Metric"));
-      assert.ok(stdout.includes("Value"));
-      assert.ok(stdout.includes("Improvement rate"));
-    });
-
-    it("shows period dates", () => {
-      const { stdout } = runCli(["eval-report", "-d", "7"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Period:"));
-      // Should have two dates
-      const dateMatch = stdout.match(/\d{4}-\d{2}-\d{2}/g);
-      assert.ok(dateMatch && dateMatch.length >= 2);
     });
   });
 

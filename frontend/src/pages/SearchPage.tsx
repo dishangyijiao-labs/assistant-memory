@@ -5,7 +5,6 @@ import { showToast } from "../components/Toast";
 import Toast from "../components/Toast";
 import {
   SOURCE_LABELS,
-  escapeHtml,
   timeAgo,
   getTimeGroup,
   getSessionTitle,
@@ -37,11 +36,6 @@ interface SyncSource {
   last_sync_at?: number;
 }
 
-interface QualityScore {
-  score?: number;
-  grade?: string;
-}
-
 const BATCH_SIZE = 50;
 
 export default function SearchPage() {
@@ -50,7 +44,6 @@ export default function SearchPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [qualityScores, setQualityScores] = useState<Record<number, QualityScore>>({});
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -72,7 +65,6 @@ export default function SearchPage() {
       api<{
         session?: Session;
         messages?: Message[];
-        quality_scores?: Record<number, QualityScore>;
       }>(
         "/api/session?session_id=" +
           encodeURIComponent(String(sessionId)) +
@@ -81,7 +73,6 @@ export default function SearchPage() {
         .then((data) => {
           if (data.session) setSelectedSession(data.session);
           setMessages(data.messages || []);
-          setQualityScores(data.quality_scores || {});
         })
         .catch(() => {
           setMessages([]);
@@ -263,11 +254,6 @@ export default function SearchPage() {
         searchInputRef.current?.focus();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "i") {
-        e.preventDefault();
-        navigate("/insights");
-        return;
-      }
       if (isInput) return;
       if (e.key === "j" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -287,7 +273,7 @@ export default function SearchPage() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [sessions, focusedIndex, navigate, selectSession]);
+  }, [sessions, focusedIndex, selectSession]);
 
   // Infinite scroll
   const handleSessionScroll = useCallback(() => {
@@ -442,7 +428,6 @@ export default function SearchPage() {
         const bubbleClass = role === "user" ? "bubble-user" : "bubble-system";
         let content = renderMarkdown(m.content || "(empty)");
         if (currentQueryRef.current) content = highlightSearchTerms(content, currentQueryRef.current);
-        const q = role === "user" ? qualityScores[m.id] : null;
         elements.push(
           <div key={"m-" + m.id} className={`chat-msg ${msgClass}`}>
             <div className="bubble-wrap">
@@ -450,15 +435,6 @@ export default function SearchPage() {
                 className={`bubble ${bubbleClass}`}
                 dangerouslySetInnerHTML={{ __html: content }}
               />
-              {q && (
-                <Link
-                  to={`/session?session_id=${selectedSession!.id}&message_id=${m.id}`}
-                  className={`quality-badge quality-${(q.grade || "c").toLowerCase().charAt(0)}`}
-                  title="Prompt quality"
-                >
-                  {q.score ?? "?"} {q.grade || "?"}
-                </Link>
-              )}
             </div>
           </div>,
         );
@@ -622,18 +598,6 @@ export default function SearchPage() {
             {renderSessionList()}
           </div>
           <div className="sidebar-foot">
-            <Link to="/insights" className="btn-insights" title="Reports">
-              <svg viewBox="0 0 16 16" fill="currentColor">
-                <path d="M0 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z" />
-              </svg>
-              <span>Reports</span>
-            </Link>
-            <Link to="/growth" className="btn-insights" title="Skill Growth">
-              <svg viewBox="0 0 16 16" fill="currentColor">
-                <path d="M1 11a1 1 0 0 1 1-1h1v3H2a1 1 0 0 1-1-1zm3-3a1 1 0 0 1 1-1h1v6H5a1 1 0 0 1-1-1zm4-4a1 1 0 0 1 1-1h1v9H9a1 1 0 0 1-1-1zm4 7V5h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1zM14 4h-1V3a1 1 0 0 0-2 0v1H9V3a1 1 0 0 0-2 0v1H5V3a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2" />
-              </svg>
-              <span>Growth</span>
-            </Link>
             <button type="button" className="btn-settings" onClick={() => navigate("/advanced")} title="Advanced">
               <svg viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
@@ -653,7 +617,7 @@ export default function SearchPage() {
                   className="action-btn"
                   title="View session detail"
                 >
-                  Score Messages
+                  View Detail
                 </Link>
               )}
             </div>

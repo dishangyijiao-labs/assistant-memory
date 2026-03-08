@@ -3,7 +3,6 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { closeDb, getDb } from "../server/storage/db-core.js";
 import type { NormalizedSession, NormalizedMessage } from "../server/storage/types.js";
-import type { QualityScoreInput } from "../server/storage/queries/quality.js";
 
 /**
  * Create a temporary DB path and set env var so db-core uses it.
@@ -48,20 +47,6 @@ export function makeMsg(overrides: Partial<NormalizedMessage> = {}): NormalizedM
     role: "user",
     content: "test",
     timestamp: Date.now(),
-    ...overrides,
-  };
-}
-
-export function makeScoreInput(overrides: Partial<QualityScoreInput> = {}): QualityScoreInput {
-  return {
-    messageId: 1,
-    sessionId: 1,
-    score: 85,
-    grade: "B+",
-    deductionsJson: "[]",
-    missingInfoChecklistJson: "[]",
-    rewritesJson: "{}",
-    tagsJson: "[]",
     ...overrides,
   };
 }

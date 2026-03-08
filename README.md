@@ -7,7 +7,7 @@ Local search tool for chat history from Cursor, Copilot, Claude Code, Codex, and
 - Import chats from local app and CLI data sources.
 - Store everything in one SQLite database.
 - Search with SQLite FTS5.
-- Browse sessions and reports in the web UI.
+- Browse sessions in the web UI.
 - Run as CLI, local web app, or macOS desktop app.
 - Local only. No account or telemetry.
 
@@ -45,15 +45,6 @@ npx assistmem search "authentication"
 npx assistmem search "bug fix" --limit 10
 
 npx assistmem stats
-
-npx assistmem quality-kit
-npx assistmem quality-kit --format json
-
-npx assistmem quality-report
-npx assistmem quality-report --days 7 --limit 10 -o report.md
-
-npx assistmem eval-report
-npx assistmem eval-report --days 30
 ```
 
 ### Web UI
@@ -128,16 +119,6 @@ npx vite --config frontend/vite.config.ts
 | Frontend | React 19, Vite 7, React Router, TypeScript |
 | Desktop | Tauri 2 (Rust) |
 | Database | SQLite (single file, `~/.assistmem.db`) |
-
-## Prompt Quality Analysis
-
-1. Run `npx assistmem serve` and open http://localhost:3939
-2. Go to **Settings** → enable **External model**, configure API key and model
-3. Select a session → click **Analyze** to open session detail
-4. Click **Analyze quality** to score each user question and get rewrites
-5. Use **Copy** on rewrite chips (Short / Engineering / Exploratory) to improve prompts
-
-Quality analysis uses retrieved examples from your own history to improve suggestions.
 
 ## Database
 

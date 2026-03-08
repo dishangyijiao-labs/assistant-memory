@@ -9,10 +9,6 @@ import {
   listSourceSettings,
   listEnabledSources,
   updateSourceSettings,
-  listTomorrowPlanItems,
-  appendTomorrowPlanItem,
-  updateTomorrowPlanItemStatus,
-  removeTomorrowPlanItem,
 } from "../../server/storage/queries/settings.js";
 
 describe("settings queries", () => {
@@ -111,59 +107,6 @@ describe("settings queries", () => {
       setSetting("source.cursor.mode", "invalid_mode");
       const s = getSourceSettings("cursor");
       assert.equal(s.mode, "local_files"); // falls back to default
-    });
-  });
-
-  describe("tomorrow plan items", () => {
-    it("returns empty array initially", () => {
-      assert.deepEqual(listTomorrowPlanItems(), []);
-    });
-
-    it("appends an item", () => {
-      const item = appendTomorrowPlanItem("Fix the bug");
-      assert.equal(item.action, "Fix the bug");
-      assert.equal(item.status, "open");
-      assert.ok(item.id.length > 0);
-      const items = listTomorrowPlanItems();
-      assert.equal(items.length, 1);
-    });
-
-    it("deduplicates by normalized action", () => {
-      const item1 = appendTomorrowPlanItem("Fix the bug");
-      const item2 = appendTomorrowPlanItem("  fix  the  BUG  ");
-      assert.equal(item1.id, item2.id);
-      assert.equal(listTomorrowPlanItems().length, 1);
-    });
-
-    it("throws on empty action", () => {
-      assert.throws(() => appendTomorrowPlanItem(""), { message: "TOMORROW_PLAN_ACTION_EMPTY" });
-      assert.throws(() => appendTomorrowPlanItem("   "), { message: "TOMORROW_PLAN_ACTION_EMPTY" });
-    });
-
-    it("updates item status", () => {
-      const item = appendTomorrowPlanItem("Task A");
-      const updated = updateTomorrowPlanItemStatus(item.id, "done");
-      assert.ok(updated);
-      assert.equal(updated!.status, "done");
-    });
-
-    it("returns null for nonexistent item update", () => {
-      assert.equal(updateTomorrowPlanItemStatus("no-such-id", "done"), null);
-    });
-
-    it("removes an item", () => {
-      const item = appendTomorrowPlanItem("Remove me");
-      assert.equal(removeTomorrowPlanItem(item.id), true);
-      assert.equal(listTomorrowPlanItems().length, 0);
-    });
-
-    it("returns false when removing nonexistent item", () => {
-      assert.equal(removeTomorrowPlanItem("no-such-id"), false);
-    });
-
-    it("stores source_report_id", () => {
-      const item = appendTomorrowPlanItem("From report", 42);
-      assert.equal(item.source_report_id, 42);
     });
   });
 });

@@ -77,37 +77,6 @@ describe("CLI integration", () => {
     });
   });
 
-  describe("quality-kit command", () => {
-    it("outputs markdown by default", () => {
-      const { stdout } = runCli(["quality-kit"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("# Prompt Quality Kit"), "should include markdown heading");
-      assert.ok(stdout.includes("Analyzer"), "should mention Analyzer");
-    });
-
-    it("outputs JSON with --format json", () => {
-      const { stdout } = runCli(["quality-kit", "--format", "json"], { ASSISTMEM_DB_PATH: dbPath });
-      const parsed = JSON.parse(stdout);
-      assert.ok(parsed.analyzer, "should have analyzer key");
-      assert.ok(parsed.daily_report, "should have daily_report key");
-    });
-  });
-
-  describe("quality-report command", () => {
-    it("generates a quality report for empty DB", () => {
-      const { stdout } = runCli(["quality-report"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.length > 0, "should produce output");
-    });
-  });
-
-  describe("eval-report command", () => {
-    it("outputs eval stats for empty DB", () => {
-      const { stdout } = runCli(["eval-report"], { ASSISTMEM_DB_PATH: dbPath });
-      assert.ok(stdout.includes("Eval"), "should include Eval heading");
-      assert.ok(stdout.includes("Pairs"), "should mention Pairs");
-      assert.ok(stdout.includes("No eval pairs"), "should indicate no pairs");
-    });
-  });
-
   describe("--help", () => {
     it("shows help text", () => {
       const { stdout } = runCli(["--help"], { ASSISTMEM_DB_PATH: dbPath });

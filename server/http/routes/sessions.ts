@@ -7,8 +7,6 @@ import {
   sendJson,
   sendError,
   SOURCE_LABELS,
-  parseJsonArray,
-  parseJsonObject,
 } from "../utils/http.js";
 
 export async function handleSearch(_req: IncomingMessage, res: ServerResponse, url: string): Promise<void> {
@@ -69,20 +67,7 @@ export async function handleGetSession(_req: IncomingMessage, res: ServerRespons
     sendError(res, 404, "NOT_FOUND", "Session not found");
     return;
   }
-  const userMessageIds = data.messages.filter((m) => m.role === "user").map((m) => m.id);
-  const qualityMap = db.getQualityScoresByMessageIds(userMessageIds);
-  const quality_scores: Record<number, Record<string, unknown>> = {};
-  for (const [msgId, row] of qualityMap) {
-    quality_scores[msgId] = {
-      score: row.score,
-      grade: row.grade,
-      deductions: parseJsonArray(row.deductions_json),
-      missing_info_checklist: parseJsonArray(row.missing_info_checklist_json),
-      rewrites: parseJsonObject(row.rewrites_json),
-      tags: parseJsonArray(row.tags_json),
-    };
-  }
-  sendJson(res, 200, { ...data, quality_scores });
+  sendJson(res, 200, data);
 }
 
 export async function handleWorkspaces(_req: IncomingMessage, res: ServerResponse, url: string): Promise<void> {
@@ -96,17 +81,4 @@ export async function handleStats(_req: IncomingMessage, res: ServerResponse): P
   const stats = db.getStats();
   const dbPath = db.getDbPath();
   sendJson(res, 200, { sessions: stats.sessions, messages: stats.messages, dbPath });
-}
-
-export async function handleGrowth(_req: IncomingMessage, res: ServerResponse, url: string): Promise<void> {
-  const q = getQueryParams(url);
-  const range = q.get("range") ?? "30d";
-  const workspace = q.get("workspace")?.trim() || undefined;
-  const now = Date.now();
-  let timeFrom: number | undefined;
-  if (range === "7d") timeFrom = now - 7 * 24 * 60 * 60 * 1000;
-  else if (range === "30d") timeFrom = now - 30 * 24 * 60 * 60 * 1000;
-  else if (range === "90d") timeFrom = now - 90 * 24 * 60 * 60 * 1000;
-  const data = db.getGrowthData({ timeFrom, workspace });
-  sendJson(res, 200, { data });
 }

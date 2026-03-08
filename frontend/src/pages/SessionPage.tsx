@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import { showToast } from "../components/Toast";
 import Toast from "../components/Toast";
 import {
   SOURCE_LABELS,
-  escapeHtml,
   formatTime,
   getDateKey,
   formatDateLabel,
@@ -28,15 +26,6 @@ interface Message {
   timestamp?: number;
 }
 
-interface QualityScore {
-  score?: number;
-  grade?: string;
-  deductions?: Array<{ reason?: string; code?: string; points?: number }>;
-  missing_info_checklist?: string[];
-  tags?: string[];
-  rewrites?: { short?: string; engineering?: string; exploratory?: string };
-}
-
 export default function SessionPage() {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -44,14 +33,7 @@ export default function SessionPage() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [qualityScores, setQualityScores] = useState<Record<number, QualityScore>>({});
   const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeStatus, setAnalyzeStatus] = useState<{ text: string; kind: string; html?: string }>({
-    text: "",
-    kind: "",
-  });
-  const [openPanels, setOpenPanels] = useState<Set<number>>(new Set());
 
   const loadSession = useCallback(() => {
     if (!sessionId) return;
@@ -59,14 +41,12 @@ export default function SessionPage() {
     api<{
       session?: Session;
       messages?: Message[];
-      quality_scores?: Record<number, QualityScore>;
     }>(
       "/api/session?session_id=" + encodeURIComponent(sessionId) + "&order=asc&limit=5000",
     )
       .then((data) => {
         setSession(data.session || null);
         setMessages(data.messages || []);
-        setQualityScores(data.quality_scores || {});
       })
       .catch(() => {
         setSession(null);
@@ -90,55 +70,6 @@ export default function SessionPage() {
     }, 100);
   }, [highlightMessageId, loading]);
 
-  const runAnalyze = useCallback(() => {
-    if (!session || analyzing) return;
-    setAnalyzing(true);
-    setAnalyzeStatus({ text: "Running quality analysis...", kind: "" });
-    api<{ analyzed?: number }>("/api/quality/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: session.id }),
-    })
-      .then((result) => {
-        setAnalyzeStatus({ text: "Done. Refreshing...", kind: "ok" });
-        setTimeout(() => loadSession(), 600);
-      })
-      .catch((err) => {
-        const msg = err?.message || "Analysis failed.";
-        const needsApiKey =
-          err?.code === "QUALITY_MODEL_NOT_CONFIGURED" || /api key/i.test(msg);
-        if (needsApiKey) {
-          setAnalyzeStatus({
-            text: msg,
-            kind: "error",
-            html: `${escapeHtml(msg)} <a href="/insights/new">Configure API key</a>`,
-          });
-        } else {
-          setAnalyzeStatus({ text: msg, kind: "error" });
-        }
-      })
-      .finally(() => setAnalyzing(false));
-  }, [session, analyzing, loadSession]);
-
-  const toggleQualityPanel = useCallback((msgId: number) => {
-    setOpenPanels((prev) => {
-      const next = new Set(prev);
-      if (next.has(msgId)) next.delete(msgId);
-      else next.add(msgId);
-      return next;
-    });
-  }, []);
-
-  const copyRewrite = useCallback((text: string, btn: HTMLButtonElement) => {
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = "Copied";
-      setTimeout(() => {
-        btn.textContent = orig;
-      }, 800);
-    });
-  }, []);
-
   // Handle tool block toggle via delegation
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -148,14 +79,8 @@ export default function SessionPage() {
         header.classList.toggle("open");
         return;
       }
-      const rewriteBtn = target.closest(".rewrite-chip button") as HTMLButtonElement | null;
-      if (rewriteBtn) {
-        const chip = rewriteBtn.closest(".rewrite-chip");
-        const src = chip?.querySelector(".copy-src");
-        if (src?.textContent) copyRewrite(src.textContent, rewriteBtn);
-      }
     },
-    [copyRewrite],
+    [],
   );
 
   if (!sessionId) {
@@ -168,7 +93,6 @@ export default function SessionPage() {
     );
   }
 
-  const userCount = messages.filter((m) => (m.role || "").toLowerCase() === "user").length;
   const label = session ? (SOURCE_LABELS[session.source] || session.source || "?") : "";
 
   // Group consecutive assistant messages
@@ -181,92 +105,6 @@ export default function SessionPage() {
       groups.push({ role, items: [m] });
     }
   }
-
-  const buildQualityHtml = (q: QualityScore, msgId: number) => {
-    const gradeClass = "grade-" + (q.grade ? q.grade.toLowerCase() : "c").charAt(0);
-    const isOpen = openPanels.has(msgId);
-    const deductions = Array.isArray(q.deductions) ? q.deductions : [];
-    const checklist = Array.isArray(q.missing_info_checklist) ? q.missing_info_checklist : [];
-    const tags = Array.isArray(q.tags) ? q.tags : [];
-    const rewrites = q.rewrites || {};
-    const hasRewrites = rewrites.short || rewrites.engineering || rewrites.exploratory;
-
-    return (
-      <>
-        <div
-          className={`quality-badge ${gradeClass}`}
-          onClick={() => toggleQualityPanel(msgId)}
-          title="Click to expand"
-        >
-          {q.score ?? "?"}&nbsp;{q.grade || "?"} {isOpen ? "\u25B4" : "\u25BE"}
-        </div>
-        <div className={`quality-panel${isOpen ? " open" : ""}`}>
-          {deductions.length > 0 && (
-            <div className="quality-section">
-              <div className="quality-section-title">Score deductions</div>
-              {deductions.map((d, i) => (
-                <div key={i} className="deduction-row">
-                  <span className="deduction-reason">{d.reason || d.code || ""}</span>
-                  {d.points != null && (
-                    <span className="deduction-points">-{Math.abs(d.points)}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {checklist.length > 0 && (
-            <div className="quality-section">
-              <div className="quality-section-title">Missing information</div>
-              {checklist.map((item, i) => (
-                <div key={i} className="checklist-item">{item}</div>
-              ))}
-            </div>
-          )}
-          {tags.length > 0 && (
-            <div className="quality-section">
-              <div className="quality-section-title">Tags</div>
-              <div className="tags-wrap">
-                {tags.map((t, i) => (
-                  <span key={i} className="tag-chip">{t}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {hasRewrites && (
-            <div className="quality-section">
-              <div className="quality-section-title">Rewrite suggestions</div>
-              <div className="rewrites">
-                {rewrites.short && (
-                  <div className="rewrite-chip">
-                    <span className="label">Short</span>
-                    <span className="text">{rewrites.short.slice(0, 60)}{rewrites.short.length > 60 ? "\u2026" : ""}</span>
-                    <span className="copy-src" style={{ display: "none" }}>{rewrites.short}</span>
-                    <button type="button">Copy</button>
-                  </div>
-                )}
-                {rewrites.engineering && (
-                  <div className="rewrite-chip">
-                    <span className="label">Engineering</span>
-                    <span className="text">{rewrites.engineering.slice(0, 60)}{rewrites.engineering.length > 60 ? "\u2026" : ""}</span>
-                    <span className="copy-src" style={{ display: "none" }}>{rewrites.engineering}</span>
-                    <button type="button">Copy</button>
-                  </div>
-                )}
-                {rewrites.exploratory && (
-                  <div className="rewrite-chip">
-                    <span className="label">Exploratory</span>
-                    <span className="text">{rewrites.exploratory.slice(0, 60)}{rewrites.exploratory.length > 60 ? "\u2026" : ""}</span>
-                    <span className="copy-src" style={{ display: "none" }}>{rewrites.exploratory}</span>
-                    <button type="button">Copy</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </>
-    );
-  };
 
   const renderMessages = () => {
     if (loading) {
@@ -303,7 +141,6 @@ export default function SessionPage() {
         const roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
         const isHighlight = highlightMessageId && String(m.id) === String(highlightMessageId);
         const content = renderMarkdown(m.content || "(empty)");
-        const q = role === "user" ? qualityScores[m.id] : null;
         elements.push(
           <div
             key={"m-" + m.id}
@@ -317,7 +154,6 @@ export default function SessionPage() {
             <div className="msg-section">
               <div className="message-content" dangerouslySetInnerHTML={{ __html: content }} />
             </div>
-            {q && <div className="quality-feedback">{buildQualityHtml(q, m.id)}</div>}
           </div>,
         );
       } else {
@@ -374,28 +210,6 @@ export default function SessionPage() {
             <div className="meta">
               {session &&
                 `Session ${session.id} \u00b7 ${formatTime(session.last_at)} \u00b7 ${session.message_count || 0} messages`}
-            </div>
-          </div>
-          <div>
-            {userCount > 0 && (
-              <button
-                type="button"
-                className="btn-analyze"
-                disabled={analyzing}
-                onClick={runAnalyze}
-              >
-                {analyzing ? "Analyzing\u2026" : "Score Messages"}
-              </button>
-            )}
-            <div
-              className={`analyze-status${analyzeStatus.kind ? " " + analyzeStatus.kind : ""}`}
-              dangerouslySetInnerHTML={
-                analyzeStatus.html
-                  ? { __html: analyzeStatus.html }
-                  : undefined
-              }
-            >
-              {!analyzeStatus.html ? analyzeStatus.text : undefined}
             </div>
           </div>
         </div>
