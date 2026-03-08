@@ -156,7 +156,7 @@ export default function getSessionPage(): string {
         <div class="meta" id="meta"></div>
       </div>
       <div>
-        <button type="button" class="btn-analyze" id="btnAnalyze" style="display:none">Insights</button>
+        <button type="button" class="btn-analyze" id="btnAnalyze" style="display:none">Score Messages</button>
         <div class="analyze-status" id="analyzeStatus"></div>
       </div>
     </div>
@@ -363,7 +363,7 @@ export default function getSessionPage(): string {
       if (btn) {
         btn.style.display = userCount > 0 ? "inline-block" : "none";
         btn.disabled = false;
-        btn.textContent = "Insights";
+        btn.textContent = "Score Messages";
         if (userCount > 0) {
           btn.dataset.sessionId = String(s.id);
         } else {
@@ -501,7 +501,7 @@ export default function getSessionPage(): string {
         })
         .catch(function(err) {
           btn.disabled = false;
-          btn.textContent = "Insights";
+          btn.textContent = "Score Messages";
           var msg = err && err.message ? err.message : "Analysis failed. Configure Insights Setup first.";
           var code = err && err.code ? String(err.code) : "";
           var needsApiKeyLink = code === "QUALITY_MODEL_NOT_CONFIGURED" || /api key/i.test(msg);

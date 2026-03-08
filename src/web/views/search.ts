@@ -56,9 +56,9 @@ export default function getSearchPage(): string {
       <div class="session-list-header"><span id="session-count"></span></div>
       <div class="session-list" id="session-list" role="listbox" tabindex="0"></div>
       <div class="sidebar-foot">
-        <a href="/insights" class="btn-insights" id="btn-insights" title="Insights">
+        <a href="/insights" class="btn-insights" id="btn-insights" title="Reports">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/></svg>
-          <span>Insights</span>
+          <span>Reports</span>
         </a>
         <a href="/growth" class="btn-insights" title="Skill Growth">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11a1 1 0 0 1 1-1h1v3H2a1 1 0 0 1-1-1zm3-3a1 1 0 0 1 1-1h1v6H5a1 1 0 0 1-1-1zm4-4a1 1 0 0 1 1-1h1v9H9a1 1 0 0 1-1-1zm4 7V5h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1zM14 4h-1V3a1 1 0 0 0-2 0v1H9V3a1 1 0 0 0-2 0v1H5V3a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2"/></svg>
@@ -74,7 +74,7 @@ export default function getSearchPage(): string {
       <div class="content-header" id="content-header">
         <h2 id="session-title">Select a session</h2>
         <div class="header-actions">
-          <a href="#" class="action-btn" id="analyze-session" title="View session detail" style="display:none">Insights</a>
+          <a href="#" class="action-btn" id="analyze-session" title="View session detail" style="display:none">Score Messages</a>
         </div>
       </div>
       <div class="messages-area" id="messages">

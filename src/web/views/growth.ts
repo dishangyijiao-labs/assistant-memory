@@ -2,9 +2,9 @@ export default function getGrowthPage(): string {
   const styles = `<style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --bg:#0f1117;--surface:#1a1d27;--border:#2a2d3a;--text:#e2e8f0;--muted:#64748b;
+      --bg:#ffffff;--surface:#f6f7fb;--border:#e1e5ee;--text:#1b1d26;--muted:#6b7280;
       --accent:#4ade80;--accent2:#60a5fa;--amber:#fbbf24;--red:#f87171;
-      --good:#4ade80;--neutral:#fbbf24;--bad:#f87171;
+      --good:#16a34a;--neutral:#d97706;--bad:#dc2626;
     }
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);padding:1.5rem;min-height:100vh;}
     .page-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
@@ -62,7 +62,7 @@ export default function getGrowthPage(): string {
 
     function buildSvgChart(data) {
       if (!data || data.length === 0) {
-        return '<div class="empty">No quality score data yet. Score some sessions first.</div>';
+        return '<div class="empty">No scores yet. Open a session and click <strong>Score Messages</strong> to start tracking your growth.</div>';
       }
 
       var PAD_L = 48, PAD_R = 20, PAD_T = 20, PAD_B = 40;
@@ -79,8 +79,8 @@ export default function getGrowthPage(): string {
       // Grid lines at 0, 25, 50, 75, 100
       var gridLines = [0, 25, 50, 75, 100].map(function(v) {
         var y = yPos(v);
-        return '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#2a2d3a" stroke-width="1"/>' +
-          '<text x="' + (PAD_L - 6) + '" y="' + (y + 4) + '" fill="#64748b" font-size="11" text-anchor="end">' + v + '</text>';
+        return '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#e1e5ee" stroke-width="1"/>' +
+          '<text x="' + (PAD_L - 6) + '" y="' + (y + 4) + '" fill="#6b7280" font-size="11" text-anchor="end">' + v + '</text>';
       }).join("");
 
       // Avg score polyline
@@ -101,7 +101,7 @@ export default function getGrowthPage(): string {
         if (i % labelStep !== 0 && i !== n - 1) return "";
         var x = xPos(i);
         var label = d.date ? d.date.slice(5) : ""; // MM-DD
-        return '<text x="' + x + '" y="' + (H - 8) + '" fill="#64748b" font-size="10" text-anchor="middle">' + escapeHtml(label) + '</text>';
+        return '<text x="' + x + '" y="' + (H - 8) + '" fill="#6b7280" font-size="10" text-anchor="middle">' + escapeHtml(label) + '</text>';
       }).join("");
 
       // Dots for avg score
@@ -117,14 +117,14 @@ export default function getGrowthPage(): string {
       return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">' +
         '<defs>' +
           '<linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0%" stop-color="#4ade80" stop-opacity="0.25"/>' +
-            '<stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>' +
+            '<stop offset="0%" stop-color="#22c55e" stop-opacity="0.18"/>' +
+            '<stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>' +
           '</linearGradient>' +
         '</defs>' +
         gridLines +
         '<path d="' + fillPath + '" fill="url(#scoreGrad)"/>' +
         '<path d="' + ratioPath + '" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>' +
-        '<path d="' + scorePath + '" fill="none" stroke="#4ade80" stroke-width="2"/>' +
+        '<path d="' + scorePath + '" fill="none" stroke="#22c55e" stroke-width="2"/>' +
         dots +
         xLabels +
         '</svg>';
