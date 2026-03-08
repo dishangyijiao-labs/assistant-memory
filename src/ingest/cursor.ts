@@ -143,25 +143,34 @@ function parseCursorPromptHistory(
 
   const max = Math.max(prompts.length, gens.length);
   if (max === 0) return null;
-  const base = Date.now() - max * 1000;
+  // Collect real timestamps first to derive a stable fallback base
+  const realTimestamps: number[] = [];
+  for (let i = 0; i < max; i += 1) {
+    const ts = gens[i]?.unixMs;
+    if (typeof ts === "number" && ts > 0) realTimestamps.push(ts);
+  }
+  // Use earliest real timestamp as base, or a fixed epoch if none exist
+  const base = realTimestamps.length
+    ? Math.min(...realTimestamps) - max * 1000
+    : 0;
   const messages: RawMessage[] = [];
   for (let i = 0; i < max; i += 1) {
     const prompt = prompts[i];
     if (prompt?.text && String(prompt.text).trim()) {
-      const ts = gens[i]?.unixMs ?? base + i * 1000;
+      const ts = gens[i]?.unixMs ?? (base > 0 ? base + i * 1000 : 0);
       messages.push({ role: "user", content: String(prompt.text).trim(), timestamp: ts });
     }
     const gen = gens[i];
     if (gen?.textDescription && String(gen.textDescription).trim()) {
-      const ts = gen.unixMs ?? base + i * 1000 + 1;
+      const ts = gen.unixMs ?? (base > 0 ? base + i * 1000 + 1 : 0);
       messages.push({ role: "assistant", content: String(gen.textDescription).trim(), timestamp: ts });
     }
   }
 
   if (messages.length === 0) return null;
   const timestamps = messages.map((m) => m.timestamp).filter((t) => t > 0);
-  const started = timestamps.length ? Math.min(...timestamps) : Date.now();
-  const last = timestamps.length ? Math.max(...timestamps) : Date.now();
+  const started = timestamps.length ? Math.min(...timestamps) : 0;
+  const last = timestamps.length ? Math.max(...timestamps) : 0;
   return {
     source: "cursor",
     workspace,
@@ -176,8 +185,9 @@ function cursorConvToSession(conv: Record<string, unknown>): RawSession | null {
   const messages = extractCursorMessages(conv);
   if (messages.length === 0) return null;
   const timestamps = messages.map((m) => m.timestamp).filter((t) => t > 0);
-  const started = timestamps.length ? Math.min(...timestamps) : Date.now();
-  const last = timestamps.length ? Math.max(...timestamps) : Date.now();
+  const now = Date.now();
+  const started = timestamps.length ? Math.min(...timestamps) : now;
+  const last = timestamps.length ? Math.max(...timestamps) : started;
   const id = (conv.id ?? conv.sessionId ?? conv.conversationId ?? `cursor-${started}`) as string;
   return {
     source: "cursor",
@@ -231,7 +241,6 @@ function parseTimestamp(obj: Record<string, unknown>, fallback: number): number 
 
 function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
   const messages: RawMessage[] = [];
-  const baseTs = Date.now();
 
   const bubbles = conv.bubbles ?? conv.turns;
   if (Array.isArray(bubbles)) {
@@ -242,11 +251,11 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
       const response = b.response ?? b.completion ?? b.assistantMessage ?? b.answer;
       const tsPrompt = parseTimestamp(
         (typeof prompt === "object" && prompt !== null ? prompt : {}) as Record<string, unknown>,
-        baseTs - (bubbles.length - i) * 2000
+        0
       );
       const tsResponse = parseTimestamp(
         (typeof response === "object" && response !== null ? response : {}) as Record<string, unknown>,
-        tsPrompt + 1
+        tsPrompt > 0 ? tsPrompt + 1 : 0
       );
       if (typeof prompt === "string" && prompt.trim()) {
         messages.push({ role: "user", content: prompt.trim(), timestamp: tsPrompt });
@@ -282,7 +291,7 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
       roleNorm = lastRole === "user" ? "assistant" : "user";
     }
     lastRole = roleNorm;
-    const ts = parseTimestamp(obj, baseTs - (items.length - i) * 1000);
+    const ts = parseTimestamp(obj, 0);
     messages.push({
       role: roleNorm as "user" | "assistant",
       content,

@@ -40,33 +40,44 @@ fn resolve_backend_entry(app: &tauri::AppHandle) -> PathBuf {
 }
 
 fn find_node(app: &tauri::AppHandle) -> PathBuf {
-    // Prefer the bundled node binary (compiled to match bundled native addons).
+    // Use the bundled node binary — it matches the native addon ABI exactly.
     if let Ok(resource_dir) = app.path().resource_dir() {
         let bundled = resource_dir.join("resources").join("bundled-node").join("node");
         if bundled.exists() {
             return bundled;
         }
     }
-    // GUI apps on macOS get a restricted PATH that excludes Homebrew and nvm.
-    // Search known locations before falling back to whatever is on PATH.
-    let candidates = [
-        "/opt/homebrew/bin/node",  // Homebrew (Apple Silicon)
-        "/usr/local/bin/node",     // Homebrew (Intel) / nvm default
-        "/usr/bin/node",           // system (rare on macOS)
-        "/opt/local/bin/node",     // MacPorts
-    ];
-    for path in &candidates {
-        if std::path::Path::new(path).exists() {
-            return PathBuf::from(path);
+    PathBuf::from("node") // last resort: rely on PATH
+}
+
+/// Kill any existing process listening on the given port so the new backend can bind.
+fn kill_stale_backend(port: &str) {
+    // Use lsof to find the PID of the process occupying our port.
+    let output = Command::new("lsof")
+        .args(["-ti", &format!("tcp:{port}")])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+    if let Ok(out) = output {
+        let pids = String::from_utf8_lossy(&out.stdout);
+        for tok in pids.split_whitespace() {
+            if let Ok(pid) = tok.trim().parse::<i32>() {
+                // SIGTERM first for graceful shutdown
+                unsafe { libc::kill(pid, libc::SIGTERM); }
+            }
+        }
+        // Brief wait for the process to exit
+        if !pids.trim().is_empty() {
+            std::thread::sleep(Duration::from_millis(500));
         }
     }
-    PathBuf::from("node") // last resort: rely on PATH
 }
 
 fn spawn_local_backend(app: &tauri::AppHandle) -> Result<Child, String> {
     let port = std::env::var("ASSISTMEM_DESKTOP_PORT")
         .or_else(|_| std::env::var("ASSISTANT_MEMORY_DESKTOP_PORT"))
         .unwrap_or_else(|_| "3939".to_string());
+    kill_stale_backend(&port);
     let entry = resolve_backend_entry(app);
     let entry_str = entry
         .to_str()

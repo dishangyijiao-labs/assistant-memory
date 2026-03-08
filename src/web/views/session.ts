@@ -93,6 +93,13 @@ export default function getSessionPage(): string {
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton-msg { height: 48px; margin-bottom: 0.5rem; border-radius: 8px; max-width: 70%; }
     .skeleton-msg:nth-child(odd) { align-self: flex-end; max-width: 60%; }
+    .tool-block { margin: 0.3rem 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .tool-block-header { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.6rem; background: var(--surface); cursor: pointer; user-select: none; font-size: 0.76rem; font-family: "SF Mono", "Consolas", "Monaco", monospace; color: var(--muted); }
+    .tool-block-header::before { content: "▶"; font-size: 0.6rem; transition: transform 0.15s; }
+    .tool-block-header.open::before { transform: rotate(90deg); }
+    .tool-block-header .tool-label { font-weight: 600; color: var(--text); }
+    .tool-block-body { display: none; padding: 0.5rem 0.6rem; font-size: 0.78rem; max-height: 300px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-family: "SF Mono", "Consolas", "Monaco", monospace; line-height: 1.45; background: #fafbfd; }
+    .tool-block-header.open + .tool-block-body { display: block; }
     .quality-badge { font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; cursor: pointer; user-select: none; }
     .quality-badge.grade-a, .quality-badge.grade-b { background: #d1fae5; color: #065f46; }
     .quality-badge.grade-c { background: #fef3c7; color: #92400e; }
@@ -176,10 +183,53 @@ export default function getSessionPage(): string {
       return div.innerHTML;
     }
 
+    function renderToolBlock(type, header, body) {
+      var label = type === "tool_call" ? "Tool Call" : "Tool Result";
+      var summary = escapeHtml(header.length > 80 ? header.slice(0, 80) + "…" : header);
+      var bodyHtml = escapeHtml(body || "");
+      var hasBody = body && body.trim().length > 0;
+      return '<div class="tool-block">' +
+        '<div class="tool-block-header" onclick="this.classList.toggle(\'open\')">' +
+          '<span class="tool-label">' + label + '</span> ' + summary +
+        '</div>' +
+        (hasBody ? '<div class="tool-block-body">' + bodyHtml + '</div>' : '') +
+      '</div>';
+    }
+
     function renderMarkdown(raw) {
       if (!raw) return "<p>(empty)</p>";
       var s = raw;
       var blocks = [];
+      // Extract tool_call / tool_result blocks first
+      s = s.replace(/\\[tool_(call|result)\\]\\s*([^\\n]*(?:\\n(?!\\[tool_)(?!\\n\\n)[^\\n]*)*)*/g, function(match, type, rest) {
+        var fullType = "tool_" + type;
+        rest = (rest || "").trim();
+        var firstLine = rest;
+        var bodyText = "";
+        var nlIdx = rest.indexOf("\\n");
+        if (nlIdx !== -1) {
+          firstLine = rest.slice(0, nlIdx).trim();
+          bodyText = rest.slice(nlIdx + 1).trim();
+        }
+        // For tool_call: header is the tool name + args summary, body is full args
+        // For tool_result: header is first line preview, body is full content
+        if (fullType === "tool_call") {
+          var spaceIdx = firstLine.indexOf(" ");
+          var toolName = spaceIdx > 0 ? firstLine.slice(0, spaceIdx) : firstLine;
+          var toolArgs = spaceIdx > 0 ? firstLine.slice(spaceIdx + 1) : "";
+          var combinedBody = toolArgs ? toolArgs + (bodyText ? "\\n" + bodyText : "") : bodyText;
+          var idx = blocks.length;
+          blocks.push(renderToolBlock(fullType, toolName, combinedBody));
+          return "%%BLOCK" + idx + "%%";
+        } else {
+          var preview = firstLine || "(empty)";
+          var fullBody = rest;
+          var idx = blocks.length;
+          blocks.push(renderToolBlock(fullType, preview, fullBody.length > 80 ? fullBody : ""));
+          return "%%BLOCK" + idx + "%%";
+        }
+      });
+      // Extract code blocks
       s = s.replace(/\`\`\`(\\w*?)\\n([\\s\\S]*?)\`\`\`/g, function(_, lang, code) {
         var idx = blocks.length;
         blocks.push('<pre><code>' + escapeHtml(code.replace(/\\n$/, '')) + '</code></pre>');

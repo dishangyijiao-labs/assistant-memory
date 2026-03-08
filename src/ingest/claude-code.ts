@@ -32,6 +32,20 @@ export function ingestClaudeCode(): RawSession[] {
   return sessions;
 }
 
+function isOnlyToolResult(blocks: unknown[]): boolean {
+  for (const x of blocks) {
+    if (!x || typeof x !== "object") continue;
+    const blk = x as Record<string, unknown>;
+    if (blk.type === "tool_result") continue;
+    // text blocks with actual content mean it's not purely tool_result
+    if (typeof blk.text === "string" && blk.text.trim()) return false;
+    if (typeof x === "string" && (x as string).trim()) return false;
+  }
+  return blocks.some(
+    (x) => x && typeof x === "object" && (x as Record<string, unknown>).type === "tool_result",
+  );
+}
+
 function claudeContentBlocksToText(blocks: unknown[]): string {
   const parts: string[] = [];
   for (const x of blocks) {
@@ -87,14 +101,18 @@ function parseClaudeJsonl(filePath: string, workspace: string): RawSession | nul
         msg.type === "user" || msg.type === "assistant" || msg.type === "system"
           ? msg.type
           : (msg.message?.role as string | undefined) ?? "assistant";
-      const role: "user" | "assistant" | "system" =
+      let role: "user" | "assistant" | "system" =
         roleRaw === "user" ? "user" : roleRaw === "system" ? "system" : "assistant";
       let text = "";
       if (typeof msg.content === "string") text = msg.content;
       else if (msg.message) {
         const c = (msg.message as { content?: string | unknown[] }).content;
         if (typeof c === "string") text = c;
-        else if (Array.isArray(c)) text = claudeContentBlocksToText(c);
+        else if (Array.isArray(c)) {
+          // Reclassify user messages that contain only tool_result blocks as assistant
+          if (role === "user" && isOnlyToolResult(c)) role = "assistant";
+          text = claudeContentBlocksToText(c);
+        }
       }
       if (!text.trim() && role !== "system") continue;
       const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now();
