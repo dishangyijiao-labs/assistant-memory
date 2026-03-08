@@ -113,10 +113,50 @@ export const searchPageScript = `
     var avatarSvg = '<svg viewBox="0 0 16 16" fill="white"><path d="M8 1l1.3 3.9L13.2 6.2l-3.9 1.3L8 11.4 6.7 7.5 2.8 6.2l3.9-1.3z"/><path d="M12 10l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" opacity=".6"/></svg>';
     var copySvg = '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 10.5H3a1.5 1.5 0 01-1.5-1.5V3A1.5 1.5 0 013 1.5h6A1.5 1.5 0 0110.5 3v.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 
+    function renderToolBlock(type, header, body) {
+      var label = type === "tool_call" ? "Tool Call" : "Tool Result";
+      var summary = escapeHtml(header.length > 80 ? header.slice(0, 80) + "…" : header);
+      var bodyHtml = escapeHtml(body || "");
+      var hasBody = body && body.trim().length > 0;
+      return '<div class="tool-block">' +
+        '<div class="tool-block-header open" onclick="this.classList.toggle(&#39;open&#39;)">' +
+          '<span class="tool-label">' + label + '</span> ' + summary +
+        '</div>' +
+        (hasBody ? '<div class="tool-block-body">' + bodyHtml + '</div>' : '') +
+      '</div>';
+    }
+
     function renderMarkdown(raw) {
       if (!raw) return "<p>(empty)</p>";
       var s = raw;
       var blocks = [];
+      // Extract tool_call / tool_result blocks first
+      s = s.replace(/\\[tool_(call|result)\\]\\s*([^\\n]*(?:\\n(?!\\[tool_)(?!\\n\\n)[^\\n]*)*)*/g, function(match, type, rest) {
+        var fullType = "tool_" + type;
+        rest = (rest || "").trim();
+        var firstLine = rest;
+        var bodyText = "";
+        var nlIdx = rest.indexOf("\\n");
+        if (nlIdx !== -1) {
+          firstLine = rest.slice(0, nlIdx).trim();
+          bodyText = rest.slice(nlIdx + 1).trim();
+        }
+        if (fullType === "tool_call") {
+          var spaceIdx = firstLine.indexOf(" ");
+          var toolName = spaceIdx > 0 ? firstLine.slice(0, spaceIdx) : firstLine;
+          var toolArgs = spaceIdx > 0 ? firstLine.slice(spaceIdx + 1) : "";
+          var combinedBody = toolArgs ? toolArgs + (bodyText ? "\\n" + bodyText : "") : bodyText;
+          var idx = blocks.length;
+          blocks.push(renderToolBlock(fullType, toolName, combinedBody));
+          return "%%BLOCK" + idx + "%%";
+        } else {
+          var preview = firstLine || "(empty)";
+          var fullBody = rest;
+          var idx = blocks.length;
+          blocks.push(renderToolBlock(fullType, preview, fullBody.length > 80 ? fullBody : ""));
+          return "%%BLOCK" + idx + "%%";
+        }
+      });
       s = s.replace(/\\\`\\\`\\\`(\\w*?)\\n([\\s\\S]*?)\\\`\\\`\\\`/g, function(_, lang, code) {
         var idx = blocks.length;
         var langLabel = lang || "code";
@@ -203,26 +243,56 @@ export const searchPageScript = `
         setMessagePanelEmpty("No messages found in this session.", false);
         return;
       }
+
+      // Group consecutive assistant messages
+      var groups = [];
+      for (var i = 0; i < messages.length; i++) {
+        var m = messages[i];
+        var role = (m.role || "assistant").toLowerCase();
+        if (role === "assistant" && groups.length > 0 && groups[groups.length - 1].role === "assistant") {
+          groups[groups.length - 1].items.push(m);
+        } else {
+          groups.push({ role: role, items: [m] });
+        }
+      }
+
       var html = "";
       var lastDateKey = null;
-      messages.forEach(function (m) {
-        var dk = getDateKey(m.timestamp);
+      groups.forEach(function(group) {
+        var firstMsg = group.items[0];
+        var dk = getDateKey(firstMsg.timestamp);
         if (dk !== lastDateKey) {
-          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(m.timestamp)) + '</div>';
+          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(firstMsg.timestamp)) + '</div>';
           lastDateKey = dk;
         }
-        var role = (m.role || "assistant").toLowerCase();
-        var msgClass = role === "user" ? "msg-user" : role === "assistant" ? "msg-assistant" : "msg-system";
-        var bubbleClass = role === "user" ? "bubble-user" : role === "assistant" ? "bubble-assistant" : "bubble-system";
-        var content = renderMarkdown(m.content || "(empty)");
-        if (currentQuery) content = highlightSearchTerms(content, currentQuery);
-        var avatarHtml = role === "assistant" ? '<div class="avatar">' + avatarSvg + '</div>' : '';
-        var q = role === "user" ? qualityScores[m.id] : null;
-        var badgeHtml = q ? '<a href="/session?session_id=' + escapeHtml(String(selectedSession.id)) + '&message_id=' + escapeHtml(String(m.id)) + '" class="quality-badge quality-' + (q.grade || "c").toLowerCase().charAt(0) + '" title="Prompt quality">' + escapeHtml(String(q.score || "?")) + ' ' + escapeHtml(q.grade || "?") + '</a>' : '';
-        html += '<div class="chat-msg ' + msgClass + '">' +
-          avatarHtml +
-          '<div class="bubble-wrap"><div class="bubble ' + bubbleClass + '">' + content + '</div>' + badgeHtml + '</div>' +
-        '</div>';
+
+        if (group.role !== "assistant") {
+          // User / system messages render individually
+          var m = firstMsg;
+          var role = group.role;
+          var msgClass = role === "user" ? "msg-user" : "msg-system";
+          var bubbleClass = role === "user" ? "bubble-user" : "bubble-system";
+          var content = renderMarkdown(m.content || "(empty)");
+          if (currentQuery) content = highlightSearchTerms(content, currentQuery);
+          var q = role === "user" ? qualityScores[m.id] : null;
+          var badgeHtml = q ? '<a href="/session?session_id=' + escapeHtml(String(selectedSession.id)) + '&message_id=' + escapeHtml(String(m.id)) + '" class="quality-badge quality-' + (q.grade || "c").toLowerCase().charAt(0) + '" title="Prompt quality">' + escapeHtml(String(q.score || "?")) + ' ' + escapeHtml(q.grade || "?") + '</a>' : '';
+          html += '<div class="chat-msg ' + msgClass + '">' +
+            '<div class="bubble-wrap"><div class="bubble ' + bubbleClass + '">' + content + '</div>' + badgeHtml + '</div>' +
+          '</div>';
+        } else {
+          // Grouped assistant messages in a single bubble
+          var innerHtml = "";
+          group.items.forEach(function(m, idx) {
+            if (idx > 0) innerHtml += '<hr class="msg-section-divider"/>';
+            var content = renderMarkdown(m.content || "(empty)");
+            if (currentQuery) content = highlightSearchTerms(content, currentQuery);
+            innerHtml += '<div class="msg-section">' + content + '</div>';
+          });
+          html += '<div class="chat-msg msg-assistant">' +
+            '<div class="avatar">' + avatarSvg + '</div>' +
+            '<div class="bubble-wrap"><div class="bubble bubble-assistant">' + innerHtml + '</div></div>' +
+          '</div>';
+        }
       });
       document.getElementById("messages").innerHTML = html;
     }

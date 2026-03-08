@@ -370,6 +370,20 @@ export const searchPageStyles = `
     }
     .code-wrap pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
+    /* Tool blocks */
+    .tool-block { margin: 0.3rem 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .tool-block-header { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.6rem; background: var(--surface); cursor: pointer; user-select: none; font-size: 0.76rem; font-family: "SF Mono", Consolas, Monaco, monospace; color: var(--muted); }
+    .tool-block-header::before { content: "▶"; font-size: 0.6rem; transition: transform 0.15s; }
+    .tool-block-header.open::before { transform: rotate(90deg); }
+    .tool-block-header .tool-label { font-weight: 600; color: var(--text); }
+    .tool-block-body { display: none; padding: 0.5rem 0.6rem; font-size: 0.78rem; max-height: 300px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-family: "SF Mono", Consolas, Monaco, monospace; line-height: 1.45; background: #fafbfd; }
+    .tool-block-header.open + .tool-block-body { display: block; }
+
+    /* Grouped assistant sections */
+    .msg-section { margin-top: 0.45rem; }
+    .msg-section:first-child { margin-top: 0; }
+    .msg-section-divider { border: none; border-top: 1px dashed var(--border); margin: 0.4rem 0; }
+
     /* Utilities */
     mark { background: #fef08a; padding: 0 0.1rem; border-radius: 2px; }
     .hidden { display: none !important; }

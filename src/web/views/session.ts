@@ -93,6 +93,10 @@ export default function getSessionPage(): string {
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton-msg { height: 48px; margin-bottom: 0.5rem; border-radius: 8px; max-width: 70%; }
     .skeleton-msg:nth-child(odd) { align-self: flex-end; max-width: 60%; }
+    .msg-section { margin-top: 0.45rem; }
+    .msg-section:first-child { margin-top: 0; }
+    .msg-section-text { }
+    .msg-section-divider { border: none; border-top: 1px dashed var(--border); margin: 0.4rem 0; }
     .tool-block { margin: 0.3rem 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
     .tool-block-header { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.6rem; background: var(--surface); cursor: pointer; user-select: none; font-size: 0.76rem; font-family: "SF Mono", "Consolas", "Monaco", monospace; color: var(--muted); }
     .tool-block-header::before { content: "▶"; font-size: 0.6rem; transition: transform 0.15s; }
@@ -189,7 +193,7 @@ export default function getSessionPage(): string {
       var bodyHtml = escapeHtml(body || "");
       var hasBody = body && body.trim().length > 0;
       return '<div class="tool-block">' +
-        '<div class="tool-block-header" onclick="this.classList.toggle(\'open\')">' +
+        '<div class="tool-block-header open" onclick="this.classList.toggle(&#39;open&#39;)">' +
           '<span class="tool-label">' + label + '</span> ' + summary +
         '</div>' +
         (hasBody ? '<div class="tool-block-body">' + bodyHtml + '</div>' : '') +
@@ -374,23 +378,66 @@ export default function getSessionPage(): string {
       var qualityScores = data.quality_scores || {};
       var html = "";
       var lastDateKey = null;
-      (data.messages || []).forEach(function (m) {
-        var dk = getDateKey(m.timestamp);
+      var msgs = data.messages || [];
+
+      // Group consecutive assistant messages together
+      var groups = [];
+      for (var i = 0; i < msgs.length; i++) {
+        var m = msgs[i];
+        var role = (m.role || "assistant").toLowerCase();
+        if (role === "assistant" && groups.length > 0 && groups[groups.length - 1].role === "assistant") {
+          groups[groups.length - 1].items.push(m);
+        } else {
+          groups.push({ role: role, items: [m] });
+        }
+      }
+
+      groups.forEach(function(group) {
+        var firstMsg = group.items[0];
+        var dk = getDateKey(firstMsg.timestamp);
         if (dk !== lastDateKey) {
-          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(m.timestamp)) + '</div>';
+          html += '<div class="date-separator">' + escapeHtml(formatDateLabel(firstMsg.timestamp)) + '</div>';
           lastDateKey = dk;
         }
-        var ts = formatTime(m.timestamp);
-        var role = (m.role || "assistant").toLowerCase();
-        var roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
-        var highlight = highlightMessageId && String(m.id) === String(highlightMessageId) ? " highlight" : "";
-        var content = renderMarkdown(m.content || "(empty)");
-        var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id], m.id) : "";
-        html += '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
-          '<div class="message-meta"><span class="role">' + escapeHtml(m.role || "assistant") + '</span><span>' + escapeHtml(ts) + '</span></div>' +
-          '<div class="message-content">' + content + '</div>' +
-          (qualityHtml ? '<div class="quality-feedback">' + qualityHtml + "</div>" : "") +
-        '</div>';
+
+        if (group.role !== "assistant" || group.items.length === 1) {
+          // Render single message normally
+          var m = firstMsg;
+          var ts = formatTime(m.timestamp);
+          var role = group.role;
+          var roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
+          var highlight = highlightMessageId && String(m.id) === String(highlightMessageId) ? " highlight" : "";
+          var content = renderMarkdown(m.content || "(empty)");
+          var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id], m.id) : "";
+          html += '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
+            '<div class="message-meta"><span class="role">' + escapeHtml(m.role || "assistant") + '</span><span>' + escapeHtml(ts) + '</span></div>' +
+            '<div class="msg-section"><div class="message-content">' + content + '</div></div>' +
+            (qualityHtml ? '<div class="quality-feedback">' + qualityHtml + "</div>" : "") +
+          '</div>';
+        } else {
+          // Grouped assistant messages
+          var highlight = "";
+          var ids = [];
+          group.items.forEach(function(m) {
+            ids.push(m.id);
+            if (highlightMessageId && String(m.id) === String(highlightMessageId)) highlight = " highlight";
+          });
+          var firstTs = formatTime(firstMsg.timestamp);
+          var lastMsg = group.items[group.items.length - 1];
+          var lastTs = formatTime(lastMsg.timestamp);
+          var timeLabel = firstTs === lastTs ? firstTs : firstTs + " – " + lastTs;
+
+          html += '<div class="message role-assistant' + highlight + '" data-message-id="' + ids.join(",") + '">' +
+            '<div class="message-meta"><span class="role">ASSISTANT</span><span>' + escapeHtml(timeLabel) + '</span><span style="font-size:0.68rem;color:var(--muted)">(' + group.items.length + ' parts)</span></div>';
+
+          group.items.forEach(function(m, idx) {
+            if (idx > 0) html += '<hr class="msg-section-divider"/>';
+            var content = renderMarkdown(m.content || "(empty)");
+            html += '<div class="msg-section"><div class="message-content">' + content + '</div></div>';
+          });
+
+          html += '</div>';
+        }
       });
       document.getElementById("messages").innerHTML = html || '<div class="empty-state">No messages found.</div>';
 

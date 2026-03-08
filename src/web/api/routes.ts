@@ -622,7 +622,7 @@ export function createHandler() {
       }
 
       if (path === "/session") {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store, must-revalidate" });
         res.end(getSessionPage());
         return;
       }
