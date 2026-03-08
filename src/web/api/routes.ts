@@ -81,7 +81,13 @@ export function createHandler() {
           for (const source of sources) {
             db.updateSourceSettings(source, { last_sync_at: syncAt });
           }
-          sendJson(res, 200, { sessions: stats.sessions, messages: stats.messages, sources, last_sync_at: syncAt });
+          sendJson(res, 200, {
+            sessions: stats.sessions,
+            messages: stats.messages,
+            sources,
+            last_sync_at: syncAt,
+            source_results: stats.sourceResults,
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Index failed";
           sendError(res, 500, "INDEX_FAILED", message);
