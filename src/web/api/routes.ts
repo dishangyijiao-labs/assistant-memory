@@ -503,14 +503,16 @@ export function createHandler() {
             sendError(res, 400, "QUALITY_MODEL_NOT_CONFIGURED", "model_name is required in Insights Setup");
             return;
           }
-          const result = await analyzeSession(sessionId, {
-            baseUrl,
-            modelName,
-            apiKey,
-          });
+          const force = body.force === true;
+          const result = await analyzeSession(
+            sessionId,
+            { baseUrl, modelName, apiKey },
+            { force }
+          );
           sendJson(res, 200, {
             session_id: sessionId,
             analyzed: result.analyzed,
+            skipped: result.skipped,
             failed: result.failed,
           });
         } catch (err) {
