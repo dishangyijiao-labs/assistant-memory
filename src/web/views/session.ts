@@ -347,7 +347,10 @@ export default function getSessionPage(): string {
       document.querySelectorAll(".quality-badge[data-panel]").forEach(function(badge) {
         badge.addEventListener("click", function() {
           var panel = document.getElementById(badge.getAttribute("data-panel") || "");
-          if (panel) panel.classList.toggle("open");
+          if (panel) {
+            var isOpen = panel.classList.toggle("open");
+            badge.innerHTML = badge.innerHTML.replace(isOpen ? "\u25be" : "\u25b4", isOpen ? "\u25b4" : "\u25be");
+          }
         });
       });
 
