@@ -1,15 +1,15 @@
 # AssistMem
 
-**Local indexer and keyword search** for chat history from **Cursor IDE**, **Copilot (VS Code)**, **Cursor CLI**, **Claude Code CLI**, **Codex CLI**, and **Gemini CLI**. One SQLite database, FTS5 keyword search, no login.
+Local search tool for chat history from Cursor, Copilot, Claude Code, Codex, and Gemini. Data stays local in one SQLite database.
 
 ## Features
 
-- **Ingest** from: Cursor IDE (`state.vscdb`), Copilot in VS Code (`chatSessions/*.json`), Cursor CLI (`~/.cursor/`), Claude Code CLI (`~/.claude/projects/`), Codex CLI (`~/.codex/sessions/`), Gemini CLI (`~/.gemini/tmp/*/chats/`).
-- **Single SQLite DB** at `~/.assistmem.db` (or `ASSISTMEM_DB_PATH`).
-- **Keyword search** via SQLite FTS5.
-- **React + Vite SPA** frontend with session browsing, insights reports, and skill growth tracking.
-- **Tauri desktop app** for macOS (Apple Silicon).
-- **Local only** — no accounts, no telemetry.
+- Import chats from local app and CLI data sources.
+- Store everything in one SQLite database.
+- Search with SQLite FTS5.
+- Browse sessions and reports in the web UI.
+- Run as CLI, local web app, or macOS desktop app.
+- Local only. No account or telemetry.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ npm install
 npm run build
 ```
 
-Optional global link:
+Optional:
 
 ```bash
 npm link
@@ -37,28 +37,21 @@ npm link
 ### CLI
 
 ```bash
-# Index all sources
 npx assistmem index
 
-# Index only some sources
 npx assistmem index --sources cursor,copilot,cursor-cli,claude-code,codex,gemini
 
-# Keyword search
 npx assistmem search "authentication"
 npx assistmem search "bug fix" --limit 10
 
-# Stats (DB path and counts)
 npx assistmem stats
 
-# Print prompt-quality kit
 npx assistmem quality-kit
 npx assistmem quality-kit --format json
 
-# Generate daily quality report
 npx assistmem quality-report
 npx assistmem quality-report --days 7 --limit 10 -o report.md
 
-# Eval stats
 npx assistmem eval-report
 npx assistmem eval-report --days 30
 ```
@@ -67,10 +60,11 @@ npx assistmem eval-report --days 30
 
 ```bash
 npx assistmem serve
-# Open http://localhost:3939
 
 npx assistmem serve --port 4000
 ```
+
+Open `http://localhost:3939` by default.
 
 ### Desktop App (macOS)
 
@@ -86,40 +80,12 @@ npm run mac:release  # .app + .dmg (Apple Silicon)
 
 ```
 assistmem/
-├── server/                     # Backend (TypeScript → dist/)
-│   ├── cli.ts                  # CLI entry point
-│   ├── index.ts                # Main entry
-│   ├── ingest/                 # Source ingestors (Cursor, Copilot, Claude Code, etc.)
-│   ├── insights/               # Insights generation, LLM client, quality analysis
-│   ├── storage/                # SQLite database, queries, schema
-│   └── http/                   # HTTP server layer
-│       ├── server.ts           # Server entry point
-│       ├── handler.ts          # Request routing and dispatch
-│       ├── middleware/         # CORS, SPA static file serving
-│       ├── routes/             # Route handlers (ingest, sessions, settings, insights, quality)
-│       ├── services/           # Business logic (decoupled from HTTP)
-│       └── utils/              # Request parsing, response helpers
-├── frontend/                   # Frontend (React 19 + Vite 7 SPA)
-│   ├── index.html              # SPA entry point
-│   ├── vite.config.ts          # Vite configuration
-│   ├── tsconfig.json           # Frontend TypeScript config
-│   └── src/
-│       ├── main.tsx            # React entry point
-│       ├── App.tsx             # Router and page layout
-│       ├── api.ts              # API client
-│       ├── pages/              # Page components
-│       ├── components/         # Reusable components
-│       └── styles/             # CSS (one file per page + global)
-├── src-tauri/                  # Tauri desktop wrapper (Rust)
-│   └── splash/                 # Boot/loading page shown while backend starts
-├── tests/                      # Test suite (523 tests)
-│   ├── cli/                    # CLI command tests
-│   ├── http/                   # HTTP endpoint tests
-│   ├── ingest/                 # Source ingestion tests
-│   ├── storage/                # Database and query tests
-│   └── insights/               # Quality analysis and report tests
-├── scripts/                    # Build helper scripts
-└── dist/                       # Compiled backend output (generated)
+├── server/       # TypeScript backend, CLI, HTTP API, storage, ingest
+├── frontend/     # React + Vite web UI
+├── src-tauri/    # Tauri desktop wrapper
+├── tests/        # Test suite
+├── scripts/      # Build helpers
+└── dist/         # Generated backend output
 ```
 
 ## Development
@@ -143,7 +109,7 @@ npm run format:check    # Prettier check
 
 ### Frontend development
 
-During development, Vite proxies API requests to the backend:
+Vite proxies `/api` requests to the backend during development:
 
 ```bash
 # Terminal 1: start the backend
@@ -171,7 +137,7 @@ npx vite --config frontend/vite.config.ts
 4. Click **Analyze quality** to score each user question and get rewrites
 5. Use **Copy** on rewrite chips (Short / Engineering / Exploratory) to improve prompts
 
-Quality analysis uses **RAG**: similar high-quality questions from your history are retrieved via FTS5 and injected as few-shot examples into the LLM context for more targeted feedback.
+Quality analysis uses retrieved examples from your own history to improve suggestions.
 
 ## Database
 
