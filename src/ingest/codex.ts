@@ -5,13 +5,14 @@ import type { RawSession, RawMessage } from "./types.js";
 
 const CODEX_SESSIONS = join(homedir(), ".codex", "sessions");
 
-export function ingestCodex(): RawSession[] {
-  if (!existsSync(CODEX_SESSIONS)) return [];
+export function ingestCodex(baseDir?: string): RawSession[] {
+  const base = baseDir ?? CODEX_SESSIONS;
+  if (!existsSync(base)) return [];
 
   const sessions: RawSession[] = [];
-  const files = listCodexFiles(CODEX_SESSIONS);
+  const files = listCodexFiles(base);
   for (const filePath of files) {
-    const workspace = relative(CODEX_SESSIONS, dirname(filePath)) || "default";
+    const workspace = relative(base, dirname(filePath)) || "default";
     try {
       const s = parseCodexFile(filePath, workspace);
       if (s && s.messages.length > 0) sessions.push(s);
@@ -101,7 +102,7 @@ function parseCodexFile(filePath: string, workspace: string): RawSession | null 
   };
 }
 
-function codexEventToMessages(evt: Record<string, unknown>): RawMessage[] {
+export function codexEventToMessages(evt: Record<string, unknown>): RawMessage[] {
   const out: RawMessage[] = [];
   const timestamp = codexTimestamp(evt.timestamp ?? evt.time) ?? Date.now();
 
@@ -157,7 +158,7 @@ function codexEventToMessages(evt: Record<string, unknown>): RawMessage[] {
   return out;
 }
 
-function codexLegacyMessage(item: Record<string, unknown>): RawMessage | null {
+export function codexLegacyMessage(item: Record<string, unknown>): RawMessage | null {
   const role = String(item.role ?? item.type ?? "assistant");
   const text = String(item.content ?? item.text ?? item.message ?? "").trim();
   if (!text) return null;
@@ -170,7 +171,7 @@ function codexLegacyMessage(item: Record<string, unknown>): RawMessage | null {
   };
 }
 
-function codexTimestamp(value: unknown): number | null {
+export function codexTimestamp(value: unknown): number | null {
   if (typeof value === "number") {
     // Values below 1e12 are likely Unix seconds (ms would place them before year 2001).
     // Modern AI tool sessions are always post-2020, so seconds < 1e12 need ×1000.
@@ -183,7 +184,7 @@ function codexTimestamp(value: unknown): number | null {
   return null;
 }
 
-function codexContentToText(content: unknown): string {
+export function codexContentToText(content: unknown): string {
   if (typeof content === "string") return content.trim();
   if (!Array.isArray(content)) return "";
   const parts: string[] = [];

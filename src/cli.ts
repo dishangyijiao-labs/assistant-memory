@@ -37,7 +37,7 @@ program
   .description("Search chat history by keyword (FTS).")
   .option("-n, --limit <number>", "Max results (default 20)", "20")
   .action((query: string, opts: { limit?: string }) => {
-    const limit = Math.min(100, Math.max(1, parseInt(opts.limit ?? "20", 10)));
+    const limit = Math.min(100, Math.max(1, parseInt(opts.limit ?? "20", 10) || 20));
     const results = db.searchMessages(query, limit);
     if (results.length === 0) {
       console.log("No matches. Try 'assistmem index' first, or a different query.");

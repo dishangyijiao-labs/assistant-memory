@@ -10,7 +10,7 @@ const CURSOR_KEYS = [
   "aiService.prompts",
 ];
 
-function getCursorCliPaths(): { globalState: string; chatsDir: string } {
+export function getCursorCliPaths(): { globalState: string; chatsDir: string } {
   const home = homedir();
   if (platform() === "win32") {
     const ap = process.env.APPDATA;
@@ -234,7 +234,7 @@ function extractCursorMessages(conv: Record<string, unknown>): RawMessage[] {
   return messages;
 }
 
-function parseCursorCliChatFile(raw: string, filename: string): RawSession | null {
+export function parseCursorCliChatFile(raw: string, filename: string): RawSession | null {
   const baseId = filename.replace(/\.(json|jsonl)$/, "");
 
   // Try single-object JSON first (covers .json and single-object .jsonl)

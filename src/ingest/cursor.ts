@@ -11,7 +11,7 @@ const CURSOR_KEYS = [
   "aiService.prompts",
 ];
 
-function getCursorWorkspaceStorageDir(): string | null {
+export function getCursorWorkspaceStorageDir(): string | null {
   const home = homedir();
   if (platform() === "win32") {
     const ap = process.env.APPDATA;
@@ -77,7 +77,7 @@ function asText(value: unknown): string | null {
   return null;
 }
 
-function parseCursorChatData(json: string): RawSession[] {
+export function parseCursorChatData(json: string): RawSession[] {
   const out: RawSession[] = [];
   try {
     const parsed = JSON.parse(json);
@@ -116,7 +116,7 @@ interface CursorGenerationEntry {
   textDescription?: string;
 }
 
-function parseCursorPromptHistory(
+export function parseCursorPromptHistory(
   promptsJson: string | null,
   generationsJson: string | null,
   workspace: string
@@ -199,7 +199,7 @@ function cursorConvToSession(conv: Record<string, unknown>): RawSession | null {
   };
 }
 
-function normalizeCursorRole(role: string | undefined, isUser?: boolean): "user" | "assistant" | null {
+export function normalizeCursorRole(role: string | undefined, isUser?: boolean): "user" | "assistant" | null {
   if (typeof isUser === "boolean") return isUser ? "user" : "assistant";
   const r = (role ?? "").toLowerCase();
   if (
@@ -225,7 +225,7 @@ function normalizeCursorRole(role: string | undefined, isUser?: boolean): "user"
 }
 
 
-function extractContent(obj: Record<string, unknown>): string {
+export function extractContent(obj: Record<string, unknown>): string {
   if (typeof obj.content === "string") return obj.content;
   if (typeof obj.text === "string") return obj.text;
   if (Array.isArray(obj.parts))

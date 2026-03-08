@@ -5,14 +5,15 @@ import type { RawSession, RawMessage } from "./types.js";
 
 const GEMINI_TMP = join(homedir(), ".gemini", "tmp");
 
-export function ingestGemini(): RawSession[] {
-  if (!existsSync(GEMINI_TMP)) return [];
+export function ingestGemini(baseDir?: string): RawSession[] {
+  const base = baseDir ?? GEMINI_TMP;
+  if (!existsSync(base)) return [];
 
   const sessions: RawSession[] = [];
-  const projectDirs = readdirSync(GEMINI_TMP, { withFileTypes: true }).filter((d) => d.isDirectory());
+  const projectDirs = readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory());
 
   for (const proj of projectDirs) {
-    const chatsDir = join(GEMINI_TMP, proj.name, "chats");
+    const chatsDir = join(base, proj.name, "chats");
     if (!existsSync(chatsDir)) continue;
 
     const files = readdirSync(chatsDir).filter((f) => f.endsWith(".json") || f.endsWith(".jsonl") || !f.includes("."));
@@ -103,7 +104,7 @@ function parseGeminiSessionFile(filePath: string, projectHash: string): RawSessi
   };
 }
 
-function parseGeminiMessage(item: unknown): RawMessage | null {
+export function parseGeminiMessage(item: unknown): RawMessage | null {
   if (!item || typeof item !== "object") return null;
   const obj = item as Record<string, unknown>;
   const role = (obj.role ?? obj.type ?? "assistant") as string;
@@ -135,7 +136,7 @@ function parseGeminiMessage(item: unknown): RawMessage | null {
   };
 }
 
-function parseGeminiPart(part: unknown): RawMessage | null {
+export function parseGeminiPart(part: unknown): RawMessage | null {
   if (!part || typeof part !== "object") return null;
   const obj = part as Record<string, unknown>;
   let text = "";

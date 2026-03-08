@@ -5,14 +5,15 @@ import type { RawSession, RawMessage } from "./types.js";
 
 const CLAUDE_PROJECTS = join(homedir(), ".claude", "projects");
 
-export function ingestClaudeCode(): RawSession[] {
-  if (!existsSync(CLAUDE_PROJECTS)) return [];
+export function ingestClaudeCode(baseDir?: string): RawSession[] {
+  const base = baseDir ?? CLAUDE_PROJECTS;
+  if (!existsSync(base)) return [];
 
   const sessions: RawSession[] = [];
-  const projectDirs = readdirSync(CLAUDE_PROJECTS, { withFileTypes: true }).filter((d) => d.isDirectory());
+  const projectDirs = readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory());
 
   for (const proj of projectDirs) {
-    const dir = join(CLAUDE_PROJECTS, proj.name);
+    const dir = join(base, proj.name);
     const files = readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
     for (const file of files) {
       const sessionId = file.replace(/\.jsonl$/, "");
@@ -32,7 +33,7 @@ export function ingestClaudeCode(): RawSession[] {
   return sessions;
 }
 
-function isOnlyToolResult(blocks: unknown[]): boolean {
+export function isOnlyToolResult(blocks: unknown[]): boolean {
   for (const x of blocks) {
     if (!x || typeof x !== "object") continue;
     const blk = x as Record<string, unknown>;
@@ -46,7 +47,7 @@ function isOnlyToolResult(blocks: unknown[]): boolean {
   );
 }
 
-function claudeContentBlocksToText(blocks: unknown[]): string {
+export function claudeContentBlocksToText(blocks: unknown[]): string {
   const parts: string[] = [];
   for (const x of blocks) {
     if (typeof x === "string") {

@@ -100,11 +100,11 @@ export function getEvalStats(opts?: {
     params.push(...opts.sessionIds);
   }
 
-  if (opts?.timeFrom != null) {
+  if (opts?.timeFrom !== null && opts?.timeFrom !== undefined) {
     clauses.push("created_at >= ?");
     params.push(opts.timeFrom);
   }
-  if (opts?.timeTo != null) {
+  if (opts?.timeTo !== null && opts?.timeTo !== undefined) {
     clauses.push("created_at <= ?");
     params.push(opts.timeTo);
   }

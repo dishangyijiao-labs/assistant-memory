@@ -204,14 +204,14 @@ export function getTopLowQualityQuestions(opts: {
   const maxScore = opts.maxScore ?? 80;
 
   let sessionIds = opts.sessionIds;
-  if (!sessionIds?.length && (opts.timeFrom != null || opts.timeTo != null)) {
+  if (!sessionIds?.length && (opts.timeFrom !== null && opts.timeFrom !== undefined || opts.timeTo !== null && opts.timeTo !== undefined)) {
     const clauses: string[] = ["1=1"];
     const params: Array<number> = [];
-    if (opts.timeFrom != null) {
+    if (opts.timeFrom !== null && opts.timeFrom !== undefined) {
       clauses.push("last_at >= ?");
       params.push(opts.timeFrom);
     }
-    if (opts.timeTo != null) {
+    if (opts.timeTo !== null && opts.timeTo !== undefined) {
       clauses.push("last_at <= ?");
       params.push(opts.timeTo);
     }

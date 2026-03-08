@@ -16,8 +16,8 @@ function getCopilotWorkspaceStorageDir(): string | null {
   return join(home, ".config", "Code", "User", "workspaceStorage");
 }
 
-export function ingestCopilot(): RawSession[] {
-  const base = getCopilotWorkspaceStorageDir();
+export function ingestCopilot(baseDir?: string): RawSession[] {
+  const base = baseDir ?? getCopilotWorkspaceStorageDir();
   if (!base || !existsSync(base)) return [];
 
   const sessions: RawSession[] = [];
@@ -65,7 +65,7 @@ const COPILOT_SKIP_KINDS = new Set([
   "confirmation",
 ]);
 
-function copilotText(value: unknown): string {
+export function copilotText(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) {
@@ -108,7 +108,7 @@ function copilotText(value: unknown): string {
   return "";
 }
 
-function normalizeRole(role: string | undefined): "user" | "assistant" | "system" | null {
+export function normalizeRole(role: string | undefined): "user" | "assistant" | "system" | null {
   if (!role) return null;
   const r = role.toLowerCase();
   if (r.includes("user")) return "user";
@@ -117,7 +117,7 @@ function normalizeRole(role: string | undefined): "user" | "assistant" | "system
   return null;
 }
 
-function parseCopilotSession(json: string, workspaceHash: string): RawSession | null {
+export function parseCopilotSession(json: string, workspaceHash: string): RawSession | null {
   try {
     const data = JSON.parse(json) as Record<string, unknown>;
     const sessionId = (data.sessionId ?? data.id) as string | undefined;

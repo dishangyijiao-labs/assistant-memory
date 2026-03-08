@@ -21,7 +21,7 @@ export interface UserMessageWithContext {
   priorAssistant?: string;
 }
 
-function extractJsonBlock(text: string): string {
+export function extractJsonBlock(text: string): string {
   const trimmed = text.trim();
   if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed;
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -73,7 +73,7 @@ async function callQualityModel(
   return JSON.parse(raw) as AnalyzerOutput;
 }
 
-function extractSessionObjective(priorAssistant: string | undefined): string {
+export function extractSessionObjective(priorAssistant: string | undefined): string {
   if (!priorAssistant?.trim()) return "(unspecified)";
   const s = priorAssistant.trim();
   return s.length > 300 ? s.slice(0, 300) + "…" : s;
