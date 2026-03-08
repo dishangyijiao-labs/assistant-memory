@@ -93,12 +93,22 @@ export default function getSessionPage(): string {
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton-msg { height: 48px; margin-bottom: 0.5rem; border-radius: 8px; max-width: 70%; }
     .skeleton-msg:nth-child(odd) { align-self: flex-end; max-width: 60%; }
-    .quality-badge { font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; }
+    .quality-badge { font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; cursor: pointer; user-select: none; }
     .quality-badge.grade-a, .quality-badge.grade-b { background: #d1fae5; color: #065f46; }
     .quality-badge.grade-c { background: #fef3c7; color: #92400e; }
     .quality-badge.grade-d, .quality-badge.grade-f { background: #fee2e2; color: #991b1b; }
-    .quality-panel { margin-top: 0.5rem; padding: 0.6rem; background: rgba(0,0,0,0.03); border-radius: 6px; font-size: 0.78rem; }
-    .quality-panel .deductions { color: var(--muted); margin-bottom: 0.4rem; }
+    .quality-panel { margin-top: 0.5rem; padding: 0.7rem; background: rgba(0,0,0,0.03); border-radius: 6px; font-size: 0.78rem; display: none; }
+    .quality-panel.open { display: block; }
+    .quality-section { margin-bottom: 0.6rem; }
+    .quality-section:last-child { margin-bottom: 0; }
+    .quality-section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.3rem; }
+    .deduction-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; padding: 0.15rem 0; color: var(--text); }
+    .deduction-reason { flex: 1; }
+    .deduction-points { font-weight: 600; color: #b91c1c; white-space: nowrap; }
+    .checklist-item { display: flex; align-items: flex-start; gap: 0.4rem; padding: 0.1rem 0; }
+    .checklist-item::before { content: "□"; flex-shrink: 0; color: var(--muted); }
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .tag-chip { background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 0.1rem 0.5rem; font-size: 0.68rem; font-weight: 500; }
     .quality-panel .rewrites { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
     .rewrite-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.25rem 0.5rem; max-width: 100%; }
     .rewrite-chip .label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; flex-shrink: 0; }
@@ -207,26 +217,59 @@ export default function getSessionPage(): string {
       });
     }
 
-    function buildQualityHtml(q) {
+    function buildQualityHtml(q, msgId) {
       if (!q) return "";
       var gradeClass = "grade-" + (q.grade ? q.grade.toLowerCase() : "c").charAt(0);
-      var badge = '<div class="quality-badge ' + gradeClass + '">' + escapeHtml(String(q.score)) + " " + escapeHtml(q.grade || "?") + "</div>";
-      var deductions = Array.isArray(q.deductions) && q.deductions.length ? q.deductions.map(function(d) { return (d.reason || d.code || "").trim(); }).filter(Boolean).slice(0, 3) : [];
+      var panelId = "qp-" + msgId;
+      var badge = '<div class="quality-badge ' + gradeClass + '" data-panel="' + panelId + '" title="Click to expand">' +
+        escapeHtml(String(q.score)) + "\u00a0" + escapeHtml(q.grade || "?") + " ▾</div>";
+
+      var deductions = Array.isArray(q.deductions) ? q.deductions : [];
+      var checklist = Array.isArray(q.missing_info_checklist) ? q.missing_info_checklist : [];
+      var tags = Array.isArray(q.tags) ? q.tags : [];
       var rewrites = q.rewrites && typeof q.rewrites === "object" ? q.rewrites : {};
       var shortR = rewrites.short || "";
       var engR = rewrites.engineering || "";
       var expR = rewrites.exploratory || "";
       var hasRewrites = shortR || engR || expR;
-      if (!deductions.length && !hasRewrites) return badge;
-      var panel = '<div class="quality-panel">';
-      if (deductions.length) panel += '<div class="deductions">' + escapeHtml(deductions.join(" · ")) + "</div>";
-      if (hasRewrites) {
-        panel += '<div class="rewrites">';
-        if (shortR) panel += '<div class="rewrite-chip"><span class="label">Short</span><span class="text">' + escapeHtml(shortR.slice(0, 50) + (shortR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(shortR) + '</span><button type="button">Copy</button></div>';
-        if (engR) panel += '<div class="rewrite-chip"><span class="label">Engineering</span><span class="text">' + escapeHtml(engR.slice(0, 50) + (engR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(engR) + '</span><button type="button">Copy</button></div>';
-        if (expR) panel += '<div class="rewrite-chip"><span class="label">Exploratory</span><span class="text">' + escapeHtml(expR.slice(0, 50) + (expR.length > 50 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(expR) + '</span><button type="button">Copy</button></div>';
-        panel += "</div>";
+
+      var panel = '<div class="quality-panel" id="' + panelId + '">';
+
+      if (deductions.length) {
+        panel += '<div class="quality-section"><div class="quality-section-title">Score deductions</div>';
+        deductions.forEach(function(d) {
+          var reason = escapeHtml((d.reason || d.code || "").trim());
+          var pts = typeof d.points === "number" ? d.points : null;
+          panel += '<div class="deduction-row"><span class="deduction-reason">' + reason + '</span>' +
+            (pts !== null ? '<span class="deduction-points">-' + Math.abs(pts) + '</span>' : '') + '</div>';
+        });
+        panel += '</div>';
       }
+
+      if (checklist.length) {
+        panel += '<div class="quality-section"><div class="quality-section-title">Missing information</div>';
+        checklist.forEach(function(item) {
+          panel += '<div class="checklist-item">' + escapeHtml(String(item)) + '</div>';
+        });
+        panel += '</div>';
+      }
+
+      if (tags.length) {
+        panel += '<div class="quality-section"><div class="quality-section-title">Tags</div><div class="tags-wrap">';
+        tags.forEach(function(t) {
+          panel += '<span class="tag-chip">' + escapeHtml(String(t)) + '</span>';
+        });
+        panel += '</div></div>';
+      }
+
+      if (hasRewrites) {
+        panel += '<div class="quality-section"><div class="quality-section-title">Rewrite suggestions</div><div class="rewrites">';
+        if (shortR) panel += '<div class="rewrite-chip"><span class="label">Short</span><span class="text">' + escapeHtml(shortR.slice(0, 60) + (shortR.length > 60 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(shortR) + '</span><button type="button">Copy</button></div>';
+        if (engR) panel += '<div class="rewrite-chip"><span class="label">Engineering</span><span class="text">' + escapeHtml(engR.slice(0, 60) + (engR.length > 60 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(engR) + '</span><button type="button">Copy</button></div>';
+        if (expR) panel += '<div class="rewrite-chip"><span class="label">Exploratory</span><span class="text">' + escapeHtml(expR.slice(0, 60) + (expR.length > 60 ? "…" : "")) + '</span><span class="copy-src" style="display:none">' + escapeHtml(expR) + '</span><button type="button">Copy</button></div>';
+        panel += '</div></div>';
+      }
+
       panel += "</div>";
       return badge + panel;
     }
@@ -292,7 +335,7 @@ export default function getSessionPage(): string {
         var roleClass = role === "user" ? "role-user" : role === "assistant" ? "role-assistant" : "role-system";
         var highlight = highlightMessageId && String(m.id) === String(highlightMessageId) ? " highlight" : "";
         var content = renderMarkdown(m.content || "(empty)");
-        var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id]) : "";
+        var qualityHtml = role === "user" ? buildQualityHtml(qualityScores[m.id], m.id) : "";
         html += '<div class="message ' + roleClass + highlight + '" data-message-id="' + m.id + '">' +
           '<div class="message-meta"><span class="role">' + escapeHtml(m.role || "assistant") + '</span><span>' + escapeHtml(ts) + '</span></div>' +
           '<div class="message-content">' + content + '</div>' +
@@ -300,6 +343,16 @@ export default function getSessionPage(): string {
         '</div>';
       });
       document.getElementById("messages").innerHTML = html || '<div class="empty-state">No messages found.</div>';
+
+      document.querySelectorAll(".quality-badge[data-panel]").forEach(function(badge) {
+        badge.addEventListener("click", function() {
+          var panel = document.getElementById(badge.getAttribute("data-panel") || "");
+          if (panel) {
+            var isOpen = panel.classList.toggle("open");
+            badge.innerHTML = badge.innerHTML.replace(isOpen ? "\u25be" : "\u25b4", isOpen ? "\u25b4" : "\u25be");
+          }
+        });
+      });
 
       document.querySelectorAll(".rewrite-chip").forEach(function(chip) {
         var src = chip.querySelector(".copy-src");
