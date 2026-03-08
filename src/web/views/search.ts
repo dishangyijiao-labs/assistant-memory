@@ -53,6 +53,7 @@ export default function getSearchPage(): string {
           <a class="sync-options-link" href="/advanced">Open Advanced</a>
         </div>
       </div>
+      <div class="session-list-header"><span id="session-count"></span></div>
       <div class="session-list" id="session-list" role="listbox" tabindex="0"></div>
       <div class="sidebar-foot">
         <a href="/insights" class="btn-insights" id="btn-insights" title="Insights">

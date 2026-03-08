@@ -182,6 +182,8 @@ export const searchPageStyles = `
     .btn-sync-inline:disabled { background: var(--surface); border-color: var(--border); color: var(--muted); cursor: wait; }
 
     /* Session list */
+    .session-list-header { padding: 6px 12px 2px; }
+    #session-count { font-size: 0.7rem; color: var(--text-faint); }
     .session-list { flex: 1; overflow-y: auto; min-height: 0; }
     .session-group-label {
       padding: 20px 12px 4px;
