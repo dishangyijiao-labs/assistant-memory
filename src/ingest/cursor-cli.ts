@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir, platform } from "os";
-import Database from "better-sqlite3";
+import { openDatabase } from "../storage/sqlite-compat.js";
 import type { RawSession, RawMessage } from "./types.js";
 
 const CURSOR_KEYS = [
@@ -32,7 +32,7 @@ export function ingestCursorCli(): RawSession[] {
 
   if (existsSync(globalState)) {
     try {
-      const db = new Database(globalState, { readonly: true });
+      const db = openDatabase(globalState, { readonly: true });
       for (const key of CURSOR_KEYS) {
         const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as { value: unknown } | undefined;
         const text = row?.value ? asText(row.value) : null;
@@ -77,8 +77,9 @@ export function ingestCursorCli(): RawSession[] {
 
 function asText(value: unknown): string | null {
   if (typeof value === "string") return value;
-  if (value && typeof value === "object" && Buffer.isBuffer(value)) {
-    return value.toString("utf-8");
+  if (value && typeof value === "object") {
+    if (Buffer.isBuffer(value)) return value.toString("utf-8");
+    if (value instanceof Uint8Array) return Buffer.from(value).toString("utf-8");
   }
   return null;
 }

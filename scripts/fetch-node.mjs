@@ -6,7 +6,7 @@ import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { arch, platform } from "os";
 
-// Must match the local Node.js major version so native addons (better-sqlite3) are compatible.
+// Must match the local Node.js major version so node:sqlite built-in is available.
 const NODE_VERSION = `v${process.versions.node}`;
 const dest = join("src-tauri", "resources", "bundled-node");
 

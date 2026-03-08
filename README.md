@@ -11,6 +11,8 @@
 
 ## Install
 
+**Requires Node.js >= 24** (uses the built-in `node:sqlite` module).
+
 **Clone (or rename your local folder to `assistmem`):**
 
 ```bash

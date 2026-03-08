@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import Database from "better-sqlite3";
+import { openDatabase } from "../src/storage/sqlite-compat.js";
 
 /**
  * Tests for cursor / cursor-cli SQLite DB reading paths.
- * Creates real .vscdb fixture files with better-sqlite3 and verifies
+ * Creates real .vscdb fixture files with node:sqlite and verifies
  * that the parsers can extract sessions from them.
  */
 
@@ -21,7 +21,7 @@ import { parseCursorCliChatFile } from "../src/ingest/cursor-cli.js";
  */
 function createFixtureVscdb(dir: string, filename: string, rows: Array<{ key: string; value: string }>): string {
   const dbPath = join(dir, filename);
-  const db = new Database(dbPath);
+  const db = openDatabase(dbPath);
   db.exec("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value TEXT)");
   const insert = db.prepare("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)");
   for (const row of rows) {
@@ -59,7 +59,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
       ]);
 
       // Read the value back and parse it like cursor.ts / cursor-cli.ts would
-      const db = new Database(join(tmpDir, "state.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "state.vscdb"), { readonly: true });
       const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "workbench.panel.aichat.view.aichat.chatdata"
       ) as { value: string } | undefined;
@@ -92,7 +92,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
         { key: "workbench.panel.aichat.chatdata", value: chatData },
       ]);
 
-      const db = new Database(join(tmpDir, "state.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "state.vscdb"), { readonly: true });
       const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "workbench.panel.aichat.chatdata"
       ) as { value: string } | undefined;
@@ -120,7 +120,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
 
       // Store as Buffer value in the DB
       const dbPath = join(tmpDir, "buf-state.vscdb");
-      const db = new Database(dbPath);
+      const db = openDatabase(dbPath);
       db.exec("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value BLOB)");
       db.prepare("INSERT INTO ItemTable (key, value) VALUES (?, ?)").run(
         "workbench.panel.aichat.view.aichat.chatdata",
@@ -128,18 +128,19 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
       );
       db.close();
 
-      const db2 = new Database(dbPath, { readonly: true });
+      const db2 = openDatabase(dbPath, { readonly: true });
       const row = db2.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "workbench.panel.aichat.view.aichat.chatdata"
       ) as { value: unknown } | undefined;
       db2.close();
 
       assert.ok(row);
-      // Simulate asText function behavior
+      // Simulate asText function behavior (node:sqlite returns Uint8Array for BLOBs)
       const value = row!.value;
       let text: string | null = null;
       if (typeof value === "string") text = value;
       else if (value && Buffer.isBuffer(value)) text = value.toString("utf-8");
+      else if (value && value instanceof Uint8Array) text = Buffer.from(value).toString("utf-8");
 
       assert.ok(text);
       const sessions = parseCursorChatData(text!);
@@ -167,7 +168,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
         "aiService.prompts",
       ];
 
-      const db = new Database(join(tmpDir, "multi-key.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "multi-key.vscdb"), { readonly: true });
       let foundSessions: ReturnType<typeof parseCursorChatData> = [];
       for (const key of CURSOR_KEYS) {
         const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(key) as
@@ -189,7 +190,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
     it("handles empty DB gracefully", () => {
       createFixtureVscdb(tmpDir, "empty.vscdb", []);
 
-      const db = new Database(join(tmpDir, "empty.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "empty.vscdb"), { readonly: true });
       const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "workbench.panel.aichat.view.aichat.chatdata"
       ) as { value: string } | undefined;
@@ -203,7 +204,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
         { key: "workbench.panel.aichat.view.aichat.chatdata", value: "" },
       ]);
 
-      const db = new Database(join(tmpDir, "null-val.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "null-val.vscdb"), { readonly: true });
       const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "workbench.panel.aichat.view.aichat.chatdata"
       ) as { value: string } | undefined;
@@ -231,7 +232,7 @@ describe("cursor SQLite DB reading (fixture .vscdb)", () => {
         { key: "composer.composerData", value: chatData },
       ]);
 
-      const db = new Database(join(tmpDir, "composer.vscdb"), { readonly: true });
+      const db = openDatabase(join(tmpDir, "composer.vscdb"), { readonly: true });
       const row = db.prepare("SELECT value FROM ItemTable WHERE key = ?").get(
         "composer.composerData"
       ) as { value: string } | undefined;

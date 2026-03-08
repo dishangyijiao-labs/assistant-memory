@@ -4,7 +4,7 @@ Native Mac desktop client built with Tauri 2, embedding the Web UI and local Nod
 
 ## Prerequisites
 
-- **Node.js** >= 18
+- **Node.js** >= 24 (required for built-in `node:sqlite`)
 - **Rust** ([rustup](https://rustup.rs/))
 - **Xcode Command Line Tools**: `xcode-select --install`
 

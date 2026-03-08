@@ -1,8 +1,8 @@
-import Database from "better-sqlite3";
 import { existsSync, mkdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { homedir, platform } from "os";
+import { openDatabase, type CompatDatabase } from "./sqlite-compat.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,17 +28,17 @@ export function getDbPath(): string {
   return process.env.ASSISTMEM_DB_PATH || process.env.ASSISTANT_MEMORY_DB_PATH || getDefaultDbPath();
 }
 
-let db: Database.Database | null = null;
+let db: CompatDatabase | null = null;
 
-export function getDb(): Database.Database {
+export function getDb(): CompatDatabase {
   if (!db) {
     const path = getDbPath();
     const dir = dirname(path);
     if (dir && !existsSync(dir) && path !== join(homedir(), ".assistmem.db") && path !== getLegacyDbPath()) {
       mkdirSync(dir, { recursive: true });
     }
-    db = new Database(path);
-    db.pragma("journal_mode = WAL");
+    db = openDatabase(path);
+    db.exec("PRAGMA journal_mode = WAL");
     const schemaPath = join(__dirname, "schema.sql");
     const schema = readFileSync(schemaPath, "utf-8");
     db.exec(schema);
