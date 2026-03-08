@@ -1,9 +1,4 @@
-import type { PromptIssue } from "../types/index.js";
-
-export interface ReflectionPrompt {
-  question: string;
-  hint: string;
-}
+import type { PromptIssue, ReflectionPrompt } from "../types/index.js";
 
 const PATTERN_REFLECTIONS: Record<string, ReflectionPrompt> = {
   "Vague goal": {
