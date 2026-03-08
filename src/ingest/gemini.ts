@@ -106,7 +106,7 @@ function parseGeminiSessionFile(filePath: string, projectHash: string): RawSessi
 function parseGeminiMessage(item: unknown): RawMessage | null {
   if (!item || typeof item !== "object") return null;
   const obj = item as Record<string, unknown>;
-  const role = (obj.role ?? obj.type ?? "user") as string;
+  const role = (obj.role ?? obj.type ?? "assistant") as string;
   let text = "";
   if (typeof obj.text === "string") text = obj.text;
   else if (typeof obj.content === "string") text = obj.content;
@@ -119,15 +119,14 @@ function parseGeminiMessage(item: unknown): RawMessage | null {
   if (!text.trim()) return null;
   const tsRaw = (obj.timestamp ?? obj.time ?? Date.now()) as number | string;
   const timestamp = typeof tsRaw === "number" ? tsRaw : new Date(String(tsRaw)).getTime() || Date.now();
-  const normalizedRole =
+  const normalizedRole: "user" | "assistant" | "system" =
     role === "user"
       ? "user"
       : role === "model" || role === "assistant" || role === "gemini"
         ? "assistant"
         : role === "system" || role === "info"
           ? "system"
-          : null;
-  if (normalizedRole === null) return null; // drop truly unrecognized roles
+          : "assistant"; // fallback: keep unrecognized roles as assistant rather than dropping
   return {
     role: normalizedRole,
     content: text.trim(),

@@ -27,6 +27,7 @@ import getSessionPage from "../views/session.js";
 import getInsightsPage from "../views/insights.js";
 import getSettingsPage from "../views/settings.js";
 import getInsightsReportsPage from "../views/insights-reports.js";
+import getGrowthPage from "../views/growth.js";
 import {
   DAILY_QUALITY_REPORT_MARKDOWN_TEMPLATE,
   QUALITY_ANALYZER_OUTPUT_SCHEMA,
@@ -236,7 +237,7 @@ export function createHandler() {
             summaryMd: insight.summary,
             patternsJson: JSON.stringify(insight.patterns),
             feedbackJson: JSON.stringify(insight.feedback),
-            detailsJson: JSON.stringify(insight.details),
+            detailsJson: JSON.stringify({ ...insight.details, reflections: insight.reflections }),
             sessionCount: insight.sessionCount,
             messageCount: insight.messageCount,
             snippetCount: insight.snippetCount,
@@ -258,6 +259,7 @@ export function createHandler() {
             feedback: insight.feedback,
             scores: insight.scores,
             score_reasons: insight.scoreReasons,
+            reflections: insight.reflections,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Insights generation failed";
@@ -415,6 +417,25 @@ export function createHandler() {
           sendJson(res, 200, { sessions: stats.sessions, messages: stats.messages, dbPath });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to read database";
+          sendError(res, 500, "DB_QUERY_FAILED", message);
+        }
+        return;
+      }
+
+      if (path === "/api/growth" && method === "GET") {
+        try {
+          const q = getQueryParams(url);
+          const range = q.get("range") ?? "30d";
+          const workspace = q.get("workspace")?.trim() || undefined;
+          const now = Date.now();
+          let timeFrom: number | undefined;
+          if (range === "7d") timeFrom = now - 7 * 24 * 60 * 60 * 1000;
+          else if (range === "30d") timeFrom = now - 30 * 24 * 60 * 60 * 1000;
+          else if (range === "90d") timeFrom = now - 90 * 24 * 60 * 60 * 1000;
+          const data = db.getGrowthData({ timeFrom, workspace });
+          sendJson(res, 200, { data });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to load growth data";
           sendError(res, 500, "DB_QUERY_FAILED", message);
         }
         return;
@@ -607,6 +628,12 @@ export function createHandler() {
       if (path === "/settings" || path === "/advanced") {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(getSettingsPage());
+        return;
+      }
+
+      if (path === "/growth") {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(getGrowthPage());
         return;
       }
 

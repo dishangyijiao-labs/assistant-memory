@@ -303,3 +303,62 @@ export function getTopLowQualityQuestions(opts: {
     };
   });
 }
+
+export interface GrowthDataPoint {
+  date: string;
+  avg_score: number;
+  count: number;
+  high_ratio: number;
+}
+
+export function getGrowthData(opts: {
+  timeFrom?: number;
+  timeTo?: number;
+  workspace?: string;
+}): GrowthDataPoint[] {
+  const db = getDb();
+  const clauses: string[] = ["1=1"];
+  const params: Array<string | number> = [];
+
+  if (typeof opts.timeFrom === "number" && Number.isFinite(opts.timeFrom)) {
+    clauses.push("q.created_at >= ?");
+    params.push(Math.trunc(opts.timeFrom));
+  }
+  if (typeof opts.timeTo === "number" && Number.isFinite(opts.timeTo)) {
+    clauses.push("q.created_at <= ?");
+    params.push(Math.trunc(opts.timeTo));
+  }
+  if (opts.workspace && opts.workspace.trim()) {
+    clauses.push("s.workspace = ?");
+    params.push(opts.workspace.trim());
+  }
+
+  const rows = db
+    .prepare(
+      `
+    SELECT
+      strftime('%Y-%m-%d', datetime(q.created_at / 1000, 'unixepoch')) AS date,
+      ROUND(AVG(q.score), 1) AS avg_score,
+      COUNT(*) AS count,
+      ROUND(SUM(CASE WHEN q.score >= 80 THEN 1.0 ELSE 0.0 END) / COUNT(*), 3) AS high_ratio
+    FROM message_quality_scores q
+    JOIN sessions s ON s.id = q.session_id
+    WHERE ${clauses.join(" AND ")}
+    GROUP BY date
+    ORDER BY date ASC
+  `
+    )
+    .all(...params) as Array<{
+    date: string;
+    avg_score: number;
+    count: number;
+    high_ratio: number;
+  }>;
+
+  return rows.map((r) => ({
+    date: r.date ?? "",
+    avg_score: Math.round((r.avg_score ?? 0) * 10) / 10,
+    count: Number(r.count ?? 0),
+    high_ratio: Math.round((r.high_ratio ?? 0) * 1000) / 1000,
+  }));
+}

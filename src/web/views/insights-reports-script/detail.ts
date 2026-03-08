@@ -349,6 +349,27 @@ export const insightsReportsScriptDetail = `
         (nextPlanHtml ? '<div class="section-card"><h3>Next-Week Plan</h3>' + nextPlanHtml + '</div>' : '');
     }
 
+    function renderReflections(details) {
+      var reflections = Array.isArray(details.reflections) ? details.reflections : [];
+      if (reflections.length === 0) {
+        return '<div class="empty">No reflection prompts available yet. Run a report with Prompt Coach enabled to generate personalized reflections.</div>';
+      }
+      var cards = reflections.map(function(r, i) {
+        return '<div class="section-card">' +
+          '<div style="display:flex;align-items:flex-start;gap:0.65rem;">' +
+            '<div style="min-width:1.75rem;height:1.75rem;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;">' + (i + 1) + '</div>' +
+            '<div style="flex:1;">' +
+              '<p style="margin:0 0 0.55rem;font-weight:600;">' + escapeHtml(r.question || "") + '</p>' +
+              (r.hint ? '<p style="margin:0;color:var(--muted);font-size:0.9rem;">💡 ' + escapeHtml(r.hint) + '</p>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+      return '<div class="section-card"><h3>Reflection Prompts</h3>' +
+        '<p style="color:var(--muted);">Use these prompts to deepen your thinking about how you collaborate with AI. Spend 2–3 minutes on each.</p>' +
+        '</div>' + cards;
+    }
+
     function renderDetailTab(tab, details) {
       if (tab === "at_a_glance") return renderAtGlance(insightState.currentReport || {}, details);
       if (tab === "what_you_work_on") return renderWhatYouWorkOn(details);
@@ -357,6 +378,7 @@ export const insightsReportsScriptDetail = `
       if (tab === "where_things_go_wrong") return renderWhereWrong(details);
       if (tab === "prompt_coach") return renderPromptCoach(details);
       if (tab === "features_to_try") return renderFeatures(details);
+      if (tab === "reflect") return renderReflections(details);
       return renderHorizon(details);
     }
 
@@ -393,7 +415,8 @@ export const insightsReportsScriptDetail = `
             { key: "where_things_go_wrong", label: "Where Things Go Wrong" },
             { key: "prompt_coach", label: "Prompt Coach" },
             { key: "features_to_try", label: "Features to Try" },
-            { key: "on_the_horizon", label: "On the Horizon" }
+            { key: "on_the_horizon", label: "On the Horizon" },
+            { key: "reflect", label: "Reflect" }
           ];
           var tabHost = document.getElementById("detail-tabs");
           if (tabHost) {
