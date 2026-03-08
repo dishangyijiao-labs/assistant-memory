@@ -1,9 +1,9 @@
 import { mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { closeDb, getDb } from "../src/storage/db-core.js";
-import type { NormalizedSession, NormalizedMessage } from "../src/storage/types.js";
-import type { QualityScoreInput } from "../src/storage/queries/quality.js";
+import { closeDb, getDb } from "../server/storage/db-core.js";
+import type { NormalizedSession, NormalizedMessage } from "../server/storage/types.js";
+import type { QualityScoreInput } from "../server/storage/queries/quality.js";
 
 /**
  * Create a temporary DB path and set env var so db-core uses it.
