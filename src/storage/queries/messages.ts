@@ -1,5 +1,6 @@
 import { getDb } from "../db-core.js";
 import type { NormalizedMessage, Source } from "../types.js";
+import { sanitizeFtsQuery } from "../utils.js";
 
 export function insertMessage(sessionId: number, m: NormalizedMessage): void {
   const database = getDb();
@@ -50,16 +51,6 @@ export function listMessages(
   if (source) params.push(source);
   params.push(limit);
   return stmt.all(...params) as MessageResult[];
-}
-
-function sanitizeFtsQuery(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '""';
-  const cleaned = trimmed.replace(/["""*(){}[\]^~:;!@#$%&\\|/<>]/g, " ").trim();
-  if (!cleaned) return '""';
-  const tokens = cleaned.split(/\s+/).filter((t) => t.length > 0);
-  if (tokens.length === 0) return '""';
-  return '"' + tokens.join(" ") + '"';
 }
 
 export function searchMessages(
