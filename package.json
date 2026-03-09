@@ -20,7 +20,6 @@
     "start": "node dist/index.js",
     "index": "node dist/index.js index",
     "search": "node dist/index.js search",
-
     "serve": "node dist/index.js serve",
     "test": "node --import tsx/esm --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p frontend/tsconfig.json",
@@ -57,6 +56,7 @@
     "node": ">=24"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "commander": "^12.1.0"
   },
   "devDependencies": {
