@@ -56,11 +56,11 @@ describe("GET /api/integrations", () => {
     // Clients
     const clients = mcp.clients as Array<Record<string, unknown>>;
     assert.ok(clients.length > 0);
-    const claudeCode = clients.find((c) => c.id === "claude-code");
-    assert.ok(claudeCode);
-    assert.equal(claudeCode!.supported, true);
-    assert.equal(claudeCode!.configured, false);
-    assert.equal(typeof claudeCode!.config_snippet, "string");
+    const claudeDesktop = clients.find((c) => c.id === "claude-desktop");
+    assert.ok(claudeDesktop);
+    assert.equal(claudeDesktop!.supported, true);
+    assert.equal(claudeDesktop!.configured, false);
+    assert.equal(typeof claudeDesktop!.config_snippet, "string");
 
     // Usage
     const usage = mcp.usage as Record<string, unknown>;
@@ -74,20 +74,20 @@ describe("GET /api/integrations", () => {
   });
 
   it("reflects MCP usage in integrations response", async () => {
-    logMcpToolUsage("claude-code", "get_relevant_context");
-    logMcpToolUsage("claude-code", "get_relevant_context");
+    logMcpToolUsage("claude-desktop", "get_relevant_context");
+    logMcpToolUsage("claude-desktop", "get_relevant_context");
 
     const { body } = await request(server, "/api/integrations");
     const mcp = body.mcp as Record<string, unknown>;
     const clients = mcp.clients as Array<Record<string, unknown>>;
-    const claudeCode = clients.find((c) => c.id === "claude-code")!;
+    const claudeDesktop = clients.find((c) => c.id === "claude-desktop")!;
 
-    assert.equal(claudeCode.configured, true);
-    assert.equal(claudeCode.call_count, 2);
-    assert.ok(claudeCode.last_used_at !== null);
+    assert.equal(claudeDesktop.configured, true);
+    assert.equal(claudeDesktop.call_count, 2);
+    assert.ok(claudeDesktop.last_used_at !== null);
 
     const usage = mcp.usage as Record<string, unknown>;
-    assert.equal(usage.last_client, "claude-code");
+    assert.equal(usage.last_client, "claude-desktop");
     assert.equal(usage.last_tool, "get_relevant_context");
   });
 });

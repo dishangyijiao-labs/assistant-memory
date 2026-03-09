@@ -9,49 +9,32 @@ export interface McpClientInfo {
 
 export const MCP_CLIENTS: McpClientInfo[] = [
   {
-    id: "claude-code",
-    name: "Claude Code",
-    description: "Anthropic's CLI for Claude",
+    id: "claude-desktop",
+    name: "Claude Desktop",
+    description: "Anthropic's desktop app for Claude",
     supported: true,
     configSnippet: JSON.stringify(
       {
         mcpServers: {
           assistmem: {
             command: "npx",
-            args: ["assistmem", "mcp", "--client", "claude-code"],
+            args: ["assistmem", "mcp", "--client", "claude-desktop"],
           },
         },
       },
       null,
       2,
     ),
-    detectHint: "Use --client claude-code or set CLAUDE_CODE env var",
   },
   {
-    id: "cursor",
-    name: "Cursor",
-    description: "AI-powered code editor",
+    id: "codex",
+    name: "Codex",
+    description: "OpenAI Codex CLI",
     supported: true,
-    configSnippet: JSON.stringify(
-      {
-        mcpServers: {
-          assistmem: {
-            command: "npx",
-            args: ["assistmem", "mcp", "--client", "cursor"],
-          },
-        },
-      },
-      null,
-      2,
-    ),
-    detectHint: "Use --client cursor",
-  },
-  {
-    id: "other",
-    name: "Other MCP Clients",
-    description: "Any MCP-compatible client",
-    supported: true,
-    configSnippet: "npx assistmem mcp --client <client-name>",
-    detectHint: "Pass --client flag with your client name",
+    configSnippet: [
+      "[mcp_servers.assistmem]",
+      'command = "npx"',
+      'args = ["assistmem", "mcp", "--client", "codex"]',
+    ].join("\n"),
   },
 ];

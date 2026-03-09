@@ -1,71 +1,70 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import { timeAgo, formatNumber } from "../format";
+import { timeAgo } from "../format";
 import Toast from "../components/Toast";
 import "../styles/integrations.css";
-
-interface McpTool {
-  name: string;
-  description: string;
-  parameters: Record<string, { type: string; required: boolean }>;
-}
 
 interface McpClient {
   id: string;
   name: string;
-  description: string;
-  supported: boolean;
-  configured: boolean;
+  installed: boolean;
   last_used_at: number | null;
   call_count: number;
-  config_snippet: string | null;
 }
 
-interface IntegrationsData {
-  mcp: {
-    server_name: string;
-    version: string;
-    transport: string;
-    tools: McpTool[];
-    clients: McpClient[];
-    usage: {
-      last_client: string | null;
-      last_tool: string | null;
-      last_used_at: number | null;
-    };
-  };
-  data_sources: {
-    summary: {
-      active_sources: number;
-      total_sessions: number;
-      total_messages: number;
-    };
+interface McpData {
+  clients: McpClient[];
+  usage: {
+    last_client: string | null;
+    last_tool: string | null;
+    last_used_at: number | null;
   };
 }
 
 export default function IntegrationsPage() {
-  const [data, setData] = useState<IntegrationsData | null>(null);
+  const [data, setData] = useState<McpData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  useEffect(() => {
-    api<IntegrationsData>("/api/integrations")
+  const load = useCallback(() => {
+    api<McpData>("/api/mcp")
       .then(setData)
-      .catch((err) => setError(err?.message || "Failed to load integrations"));
+      .catch((err) => setError(err?.message || "Failed to load"));
   }, []);
 
-  const toggleConfig = useCallback((clientId: string) => {
-    setExpandedConfigs((prev) => {
-      const next = new Set(prev);
-      if (next.has(clientId)) next.delete(clientId);
-      else next.add(clientId);
-      return next;
-    });
-  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard.writeText(text).catch(() => {});
+  const doAction = useCallback(async (clientId: string, action: "install" | "remove") => {
+    setBusy(clientId);
+    setTestResult(null);
+    try {
+      await api(`/api/mcp/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId }),
+      });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
+  const doTest = useCallback(async () => {
+    setBusy("test");
+    try {
+      const result = await api<{ ok: boolean; message: string }>("/api/mcp/test", {
+        method: "POST",
+      });
+      setTestResult(result);
+    } catch (err) {
+      setTestResult({ ok: false, message: err instanceof Error ? err.message : "Test failed" });
+    } finally {
+      setBusy(null);
+    }
   }, []);
 
   if (error) {
@@ -73,7 +72,7 @@ export default function IntegrationsPage() {
       <div className="integrations-page">
         <main className="main">
           <Link className="back-link" to="/">&larr; Back</Link>
-          <h1 className="page-title">Integrations</h1>
+          <h1 className="page-title">MCP</h1>
           <div className="error">{error}</div>
         </main>
       </div>
@@ -85,122 +84,91 @@ export default function IntegrationsPage() {
       <div className="integrations-page">
         <main className="main">
           <Link className="back-link" to="/">&larr; Back</Link>
-          <h1 className="page-title">Integrations</h1>
+          <h1 className="page-title">MCP</h1>
           <div className="loading">Loading...</div>
         </main>
       </div>
     );
   }
 
-  const { mcp, data_sources } = data;
-
   return (
     <>
       <div className="integrations-page">
         <main className="main">
           <Link className="back-link" to="/">&larr; Back</Link>
-          <h1 className="page-title">Integrations</h1>
+          <h1 className="page-title">MCP</h1>
           <p className="page-sub">
-            AssistMem MCP Server &middot; v{mcp.version} &middot; {mcp.transport} transport
+            Manage AssistMem MCP server connections
           </p>
 
-          {/* MCP Tools */}
+          {/* Client rows */}
           <section>
-            <div className="section-head">
-              <h2 className="section-title">MCP Tools</h2>
-            </div>
-            <div className="card-list">
-              {mcp.tools.map((tool) => (
-                <div key={tool.name} className="card">
-                  <div className="card-info">
-                    <h3 className="card-title">{tool.name}</h3>
-                    <p className="card-desc">{tool.description}</p>
-                    <div className="tool-params">
-                      {Object.entries(tool.parameters).map(([name, param]) => (
-                        <span key={name} style={{ marginRight: "0.8rem" }}>
-                          <code>{name}</code>
-                          {param.required ? "" : " (optional)"}
-                        </span>
-                      ))}
-                    </div>
+            <div className="mcp-client-list">
+              {data.clients.map((client) => (
+                <div key={client.id} className="mcp-client-row">
+                  <div className="mcp-client-info">
+                    <span className="mcp-client-name">{client.name}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* AI Clients */}
-          <section>
-            <div className="section-head">
-              <h2 className="section-title">AI Clients</h2>
-            </div>
-            <div className="card-list">
-              {mcp.clients.map((client) => (
-                <div key={client.id} className="card">
-                  <div className="card-header">
-                    <div className="card-info">
-                      <h3 className="card-title">{client.name}</h3>
-                      <p className="card-desc">{client.description}</p>
-                      <div className="badges">
-                        {client.supported && (
-                          <span className="badge supported">Supported</span>
-                        )}
-                        {client.configured && (
-                          <span className="badge configured">Configured</span>
-                        )}
-                        {client.last_used_at && (
-                          <span className="badge last-used">
-                            Last used {timeAgo(client.last_used_at)}
-                          </span>
-                        )}
-                      </div>
-                      {client.configured && (
-                        <div className="card-meta">
-                          <span>{formatNumber(client.call_count)} calls</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {client.config_snippet && (
-                    <div className="config-toggle">
-                      <button type="button" onClick={() => toggleConfig(client.id)}>
-                        {expandedConfigs.has(client.id) ? "Hide setup" : "Show setup"}
+                  <div className="mcp-client-actions">
+                    {client.installed ? (
+                      <>
+                        <button
+                          type="button"
+                          className="mcp-btn mcp-btn-secondary"
+                          disabled={busy === client.id}
+                          onClick={() => doAction(client.id, "install")}
+                        >
+                          Update
+                        </button>
+                        <button
+                          type="button"
+                          className="mcp-btn mcp-btn-danger"
+                          disabled={busy === client.id}
+                          onClick={() => doAction(client.id, "remove")}
+                        >
+                          Remove
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="mcp-btn mcp-btn-primary"
+                        disabled={busy === client.id}
+                        onClick={() => doAction(client.id, "install")}
+                      >
+                        Install
                       </button>
-                      {expandedConfigs.has(client.id) && (
-                        <div className="config-block">
-                          <pre>{client.config_snippet}</pre>
-                          <button
-                            type="button"
-                            className="copy-btn"
-                            onClick={() => copyToClipboard(client.config_snippet!)}
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Data Sources Summary */}
-          <section>
-            <div className="section-head">
-              <h2 className="section-title">Data Sources</h2>
-            </div>
-            <div className="summary-card">
-              <span className="summary-stats">
-                {formatNumber(data_sources.summary.active_sources)} sources active
-                &middot; {formatNumber(data_sources.summary.total_sessions)} sessions
-                &middot; {formatNumber(data_sources.summary.total_messages)} messages
+          {/* Test connection */}
+          <section className="mcp-test-section">
+            <button
+              type="button"
+              className="mcp-btn mcp-btn-secondary"
+              disabled={busy === "test"}
+              onClick={doTest}
+            >
+              Test Connection
+            </button>
+            {testResult && (
+              <span className={`mcp-test-result ${testResult.ok ? "ok" : "fail"}`}>
+                {testResult.message}
               </span>
-              <Link className="summary-link" to="/advanced">
-                Go to Advanced Settings &rarr;
-              </Link>
-            </div>
+            )}
           </section>
+
+          {/* Usage footer */}
+          {data.usage.last_used_at && (
+            <div className="mcp-usage-footer">
+              Last used {timeAgo(data.usage.last_used_at)}
+              {data.usage.last_client && <> by {data.usage.last_client}</>}
+            </div>
+          )}
         </main>
       </div>
       <Toast />

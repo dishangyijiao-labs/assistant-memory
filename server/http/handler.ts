@@ -29,6 +29,15 @@ export function createHandler() {
       if (path === "/api/model/test" && method === "POST") {
         return await settingsRoutes.handleTestModel(req, res);
       }
+      if (path === "/api/mcp/install" && method === "POST") {
+        return await integrationsRoutes.handleMcpInstall(req, res);
+      }
+      if (path === "/api/mcp/remove" && method === "POST") {
+        return await integrationsRoutes.handleMcpRemove(req, res);
+      }
+      if (path === "/api/mcp/test" && method === "POST") {
+        return await integrationsRoutes.handleMcpTest(req, res);
+      }
 
       // --- PUT routes ---
       if (path === "/api/settings/model" && method === "PUT") {
@@ -60,6 +69,7 @@ export function createHandler() {
       if (path === "/api/workspaces") return await sessionsRoutes.handleWorkspaces(req, res, url);
       if (path === "/api/stats") return await sessionsRoutes.handleStats(req, res);
       if (path === "/api/integrations") return await integrationsRoutes.handleGetIntegrations(req, res);
+      if (path === "/api/mcp") return await integrationsRoutes.handleGetMcp(req, res);
       if (path === "/api/settings/sources") return await settingsRoutes.handleGetSources(req, res);
       if (path === "/api/settings/model") return await settingsRoutes.handleGetModel(req, res);
 
