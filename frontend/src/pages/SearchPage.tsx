@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { showToast } from "../components/Toast";
 import Toast from "../components/Toast";
+import { SettingsWorkspace } from "./SettingsPage";
 import {
   SOURCE_LABELS,
   timeAgo,
@@ -38,8 +39,24 @@ interface SyncSource {
 
 const BATCH_SIZE = 50;
 
+function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2.25" />
+      <path d="M5.5 2.75v10.5" />
+      {collapsed ? (
+        <path d="M8 8h2.75m-1.2-1.25L10.8 8l-1.25 1.25" />
+      ) : (
+        <path d="M10.75 8H8m1.2-1.25L7.95 8l1.25 1.25" />
+      )}
+    </svg>
+  );
+}
+
 export default function SearchPage() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const isSettingsRoute = location.pathname === "/settings";
   const [query, setQuery] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -51,6 +68,7 @@ export default function SearchPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncPanelOpen, setSyncPanelOpen] = useState(false);
   const [syncSources, setSyncSources] = useState<SyncSource[]>([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const loadedOffset = useRef(0);
   const hasMoreSessions = useRef(true);
@@ -160,8 +178,9 @@ export default function SearchPage() {
       setFocusedIndex(idx);
       setSelectedSession(s);
       loadSessionDetail(s.id);
+      if (isSettingsRoute) navigate("/");
     },
-    [sessions, loadSessionDetail],
+    [sessions, loadSessionDetail, isSettingsRoute, navigate],
   );
 
   const handleSearch = useCallback(
@@ -385,7 +404,13 @@ export default function SearchPage() {
     if (!selectedSession || messages.length === 0) {
       return (
         <div className="empty-state">
-          <p>{selectedSession ? "No messages found in this session." : "Select a session from the sidebar"}</p>
+          <p>
+            {selectedSession
+              ? "No messages found in this session."
+              : isSidebarCollapsed
+                ? "Expand sessions to choose a conversation."
+                : "Select a session from the list."}
+          </p>
           {!selectedSession && (
             <p className="guidance">
               If no sessions appear, run <code>npx assistmem index</code>
@@ -476,156 +501,147 @@ export default function SearchPage() {
 
   return (
     <>
-      <div className="layout" style={{ overflow: "hidden" }}>
-        <aside className="sidebar">
-          <div className="sidebar-brand">
-            <svg className="brand-logo" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <defs>
-                <linearGradient id="bl-bg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4ADE80" />
-                  <stop offset="100%" stopColor="#15803D" />
-                </linearGradient>
-              </defs>
-              <rect width="36" height="36" rx="8" fill="url(#bl-bg)" />
-              <line x1="18" y1="18" x2="18" y2="9" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <line x1="18" y1="18" x2="26" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <line x1="18" y1="18" x2="26" y2="23" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <line x1="18" y1="18" x2="18" y2="27" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <line x1="18" y1="18" x2="10" y2="23" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <line x1="18" y1="18" x2="10" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-              <circle cx="18" cy="18" r="4" fill="white" />
-              <circle cx="18" cy="9" r="2.5" fill="white" />
-              <circle cx="26" cy="14" r="2.5" fill="white" />
-              <circle cx="26" cy="23" r="2.5" fill="white" />
-              <circle cx="18" cy="27" r="2.5" fill="white" />
-              <circle cx="10" cy="23" r="2.5" fill="white" />
-              <circle cx="10" cy="14" r="2.5" fill="white" />
-            </svg>
-            <span className="brand-name">AssistMem</span>
-          </div>
-          <div className="sidebar-filters">
-            <form className="search-wrap" role="search" onSubmit={handleSearch}>
-              <svg className="search-icon" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <input
-                type="search"
-                ref={searchInputRef}
-                value={query}
-                onChange={handleSearchInput}
-                placeholder="Search sessions..."
-              />
-            </form>
-            <div className="sync-btn-group">
-              <button type="button" className="btn-index-now" disabled={syncing} onClick={handleSync}>
-                {syncing ? "Syncing..." : "Sync Local Chats"}
-              </button>
-              <button
-                type="button"
-                className="btn-sync-options"
-                id="btn-sync-options"
-                aria-expanded={syncPanelOpen}
-                title="Select sync sources"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!syncPanelOpen) loadSyncOptions();
-                  setSyncPanelOpen(!syncPanelOpen);
-                }}
+      <div className="workspace-page">
+        <div className="workspace-toolbar">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={isSidebarCollapsed ? "Show sessions" : "Hide sessions"}
+            title={isSidebarCollapsed ? "Show sessions" : "Hide sessions"}
+          >
+            <SidebarToggleIcon collapsed={isSidebarCollapsed} />
+          </button>
+        </div>
+        <div className={`layout${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+          {!isSidebarCollapsed && (
+            <aside className="sidebar" id="sessions-sidebar">
+              <div className="sidebar-filters">
+                <form className="search-wrap" role="search" onSubmit={handleSearch}>
+                  <svg className="search-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <input
+                    type="search"
+                    ref={searchInputRef}
+                    value={query}
+                    onChange={handleSearchInput}
+                    placeholder="Search sessions..."
+                  />
+                </form>
+                <div className="sync-btn-group">
+                  <button type="button" className="btn-index-now" disabled={syncing} onClick={handleSync}>
+                    {syncing ? "Syncing..." : "Sync Local Chats"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-sync-options"
+                    id="btn-sync-options"
+                    aria-expanded={syncPanelOpen}
+                    title="Select sync sources"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!syncPanelOpen) loadSyncOptions();
+                      setSyncPanelOpen(!syncPanelOpen);
+                    }}
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
+                    </svg>
+                  </button>
+                </div>
+                {syncPanelOpen && (
+                  <div className="sync-options-panel" id="sync-options-panel">
+                    <div className="sync-options-title">Sync Options</div>
+                    <div className="sync-options-status">
+                      {syncSources.length === 0
+                        ? "No source configuration found."
+                        : `Enabled ${enabledCount}/${syncSources.length} \u00b7 ${lastSyncTs > 0 ? "Last sync " + timeAgo(lastSyncTs) : "Not synced yet"}`}
+                    </div>
+                    <div className="sync-options-list">
+                      {syncSources.map((s) => (
+                        <label key={s.source} className="sync-source-row">
+                          <div className="sync-source-main">
+                            <div className="sync-source-name">
+                              {SOURCE_LABELS[s.source] || s.source || "?"}
+                            </div>
+                            <div className="sync-source-meta">
+                              {s.last_sync_at ? "Last sync: " + timeAgo(s.last_sync_at) : "Not synced yet"}
+                            </div>
+                          </div>
+                          <input
+                            className="sync-source-toggle"
+                            type="checkbox"
+                            checked={s.enabled}
+                            onChange={(e) => toggleSyncSource(s.source, e.target.checked)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-sync-inline"
+                      disabled={syncing}
+                      onClick={handleSync}
+                    >
+                      {syncing ? "Syncing..." : "Sync Enabled Now"}
+                    </button>
+                    <Link className="sync-options-link" to="/settings">
+                      Open Advanced
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <div className="session-list-header">
+                <span id="session-count">
+                  {totalSessions > 0 ? totalSessions + " sessions" : ""}
+                </span>
+              </div>
+              <div
+                className="session-list"
+                ref={sessionListRef}
+                onScroll={handleSessionScroll}
+                role="listbox"
+                tabIndex={0}
               >
-                <svg viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
-                </svg>
-              </button>
-            </div>
-            {syncPanelOpen && (
-              <div className="sync-options-panel" id="sync-options-panel">
-                <div className="sync-options-title">Sync Options</div>
-                <div className="sync-options-status">
-                  {syncSources.length === 0
-                    ? "No source configuration found."
-                    : `Enabled ${enabledCount}/${syncSources.length} \u00b7 ${lastSyncTs > 0 ? "Last sync " + timeAgo(lastSyncTs) : "Not synced yet"}`}
-                </div>
-                <div className="sync-options-list">
-                  {syncSources.map((s) => (
-                    <label key={s.source} className="sync-source-row">
-                      <div className="sync-source-main">
-                        <div className="sync-source-name">
-                          {SOURCE_LABELS[s.source] || s.source || "?"}
-                        </div>
-                        <div className="sync-source-meta">
-                          {s.last_sync_at ? "Last sync: " + timeAgo(s.last_sync_at) : "Not synced yet"}
-                        </div>
-                      </div>
-                      <input
-                        className="sync-source-toggle"
-                        type="checkbox"
-                        checked={s.enabled}
-                        onChange={(e) => toggleSyncSource(s.source, e.target.checked)}
-                      />
-                    </label>
-                  ))}
-                </div>
+                {renderSessionList()}
+              </div>
+              <div className="sidebar-foot">
                 <button
                   type="button"
-                  className="btn-sync-inline"
-                  disabled={syncing}
-                  onClick={handleSync}
+                  className={`btn-settings${isSettingsRoute ? " active" : ""}`}
+                  onClick={() => navigate("/settings")}
+                  title="Settings"
+                  aria-current={isSettingsRoute ? "page" : undefined}
                 >
-                  {syncing ? "Syncing..." : "Sync Enabled Now"}
+                  <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
+                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
+                  </svg>
+                  <span className="settings-label">Settings</span>
                 </button>
-                <Link className="sync-options-link" to="/settings">
-                  Open Advanced
-                </Link>
               </div>
-            )}
-          </div>
-          <div className="session-list-header">
-            <span id="session-count">
-              {totalSessions > 0 ? totalSessions + " sessions" : ""}
-            </span>
-          </div>
-          <div
-            className="session-list"
-            ref={sessionListRef}
-            onScroll={handleSessionScroll}
-            role="listbox"
-            tabIndex={0}
-          >
-            {renderSessionList()}
-          </div>
-          <div className="sidebar-foot">
-            <button type="button" className="btn-settings" onClick={() => navigate("/settings")} title="Settings">
-              <svg viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
-                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
-              </svg>
-              <span className="settings-label">Settings</span>
-            </button>
-          </div>
-        </aside>
-        <main className="content">
-          <div className="content-header">
-            <h2>{selectedSession ? getSessionTitle(selectedSession) : "Select a session"}</h2>
-            <div className="header-actions">
-              {selectedSession && (
-                <Link
-                  to={`/session?session_id=${selectedSession.id}`}
-                  className="action-btn"
-                  title="View session detail"
-                >
-                  View Detail
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="messages-area" onClick={handleMessagesClick}>
-            {renderMessageArea()}
-          </div>
-        </main>
+            </aside>
+          )}
+          {isSettingsRoute ? (
+            <main className="settings-pane">
+              <SettingsWorkspace onClose={() => navigate("/")} />
+            </main>
+          ) : (
+            <main className="content">
+              <div className="content-header">
+                <h2>{selectedSession ? getSessionTitle(selectedSession) : "Select a session"}</h2>
+              </div>
+              <div className="messages-area" onClick={handleMessagesClick}>
+                {renderMessageArea()}
+              </div>
+            </main>
+          )}
+        </div>
       </div>
       <Toast />
     </>

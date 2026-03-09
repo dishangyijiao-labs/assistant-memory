@@ -1,52 +1,60 @@
-/* Settings page — unified two-column layout */
+/* Settings layout */
 
 .settings-page {
-  max-width: 920px;
-  margin: 0 auto;
   min-height: 100vh;
-  padding: 1.4rem;
+  background: var(--bg);
 }
 
-.settings-page .back-link {
-  display: inline-block;
-  font-size: 0.86rem;
-  color: var(--accent);
-  margin-bottom: 0.6rem;
-  text-decoration: none;
-}
-.settings-page .back-link:hover {
-  text-decoration: underline;
-}
-
-/* Shell: left nav + right detail */
 .settings-shell {
   display: flex;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  min-height: 480px;
-  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  background: var(--sidebar-bg);
 }
 
-/* Left nav */
 .settings-nav {
-  width: 170px;
+  width: 220px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
-  padding: 1rem 0;
+  padding: 1.4rem 0 1.2rem;
+  background: #fbfbfa;
 }
 
-.settings-nav .nav-title {
-  margin: 0 0 0.8rem;
-  padding: 0 0.9rem;
-  font-size: 1.1rem;
-  font-weight: 700;
+.settings-home-link {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 1.4rem 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.55rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.settings-home-link:hover {
+  color: var(--text);
+}
+
+.settings-home-caret {
+  color: var(--muted);
+  font-size: 1.8rem;
+  line-height: 1;
+  margin-top: -0.05em;
 }
 
 .settings-nav ul {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0.75rem;
+}
+
+.settings-nav li + li {
+  margin-top: 0.15rem;
 }
 
 .settings-nav li button {
@@ -54,119 +62,129 @@
   width: 100%;
   text-align: left;
   border: none;
-  background: none;
-  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  background: transparent;
+  padding: 0.8rem 1rem;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.94rem;
+  font-weight: 500;
   color: var(--muted);
   cursor: pointer;
-  border-left: 3px solid transparent;
   transition: background 0.12s, color 0.12s;
 }
+
 .settings-nav li button:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f1efe8;
   color: var(--text);
-}
-.settings-nav li button.active {
-  color: var(--text);
-  font-weight: 600;
-  background: rgba(59, 130, 246, 0.06);
-  border-left-color: var(--accent);
 }
 
-/* Right detail */
+.settings-nav li button.active {
+  background: #ebe7dc;
+  color: var(--text);
+}
+
 .settings-detail {
   flex: 1;
-  padding: 1rem 1.2rem;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.55rem 2rem 2.2rem;
+  background: var(--sidebar-bg);
 }
 
 /* Shared panel */
 .panel-title {
-  margin: 0 0 0.9rem;
-  font-size: 1.05rem;
+  margin: 0 0 1.25rem;
+  font-size: 1.6rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .panel-loading {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   padding: 1rem 0;
 }
+
 .panel-error {
   color: var(--error);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   padding: 1rem 0;
 }
 
 /* Shared button */
 .s-btn {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.32rem 0.7rem;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-size: 0.88rem;
+  font-weight: 600;
   cursor: pointer;
   background: #fff;
   color: var(--text);
-  transition: border-color 0.12s;
+  transition: border-color 0.12s, background 0.12s;
 }
+
 .s-btn:hover:not(:disabled) {
-  border-color: var(--accent);
+  border-color: #c9ced6;
 }
+
 .s-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
+
 .s-btn.primary {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
 }
+
 .s-btn.primary:hover:not(:disabled) {
-  opacity: 0.85;
+  opacity: 0.9;
 }
+
 .s-btn.danger {
   color: #dc2626;
   border-color: #fca5a5;
 }
+
 .s-btn.danger:hover:not(:disabled) {
   background: #fef2f2;
-  border-color: #dc2626;
+  border-color: #ef4444;
 }
 
-/* ========== MCP panel ========== */
-
+/* MCP panel */
 .mcp-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.55rem 0;
-  gap: 0.5rem;
+  gap: 1rem;
+  padding: 1rem 0;
 }
+
 .mcp-row + .mcp-row {
   border-top: 1px solid var(--border);
 }
 
-.mcp-enable-row {
-  border-top: none;
-}
-
 .mcp-row-label {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.98rem;
+  font-weight: 600;
 }
 
 .mcp-row-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .mcp-readiness {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   color: var(--muted);
 }
+
 .mcp-readiness.ready {
   color: #059669;
 }
@@ -174,44 +192,47 @@
 .mcp-divider {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 0.3rem 0;
+  margin: 0.2rem 0 0;
 }
 
 .mcp-meta-row .muted {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
 
 .mcp-test {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding-top: 0.6rem;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding-top: 1.3rem;
 }
 
 .mcp-test-result {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
+
 .mcp-test-result.ok {
   color: #059669;
 }
+
 .mcp-test-result.fail {
   color: #dc2626;
 }
 
-/* ========== Sources panel ========== */
-
+/* Data sources */
 .src-list {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.75rem;
 }
 
 .src-row {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.6rem 0.75rem;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
 }
+
 .src-row.off {
   opacity: 0.65;
 }
@@ -220,11 +241,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .src-name {
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   font-weight: 600;
 }
 
@@ -238,44 +259,42 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.25rem;
-  font-size: 0.78rem;
+  gap: 1rem;
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
 }
 
-/* Edit button: visible only on row hover */
 .src-edit-btn {
   border: none;
-  background: none;
+  background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   cursor: pointer;
-  padding: 0.15rem 0.4rem;
+  padding: 0.2rem 0.35rem;
   border-radius: 6px;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.12s;
 }
-.src-row:hover .src-edit-btn {
-  opacity: 1;
-}
+
 .src-edit-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: #f3f4f6;
   color: var(--text);
 }
 
 /* Toggle */
 .toggle {
   position: relative;
-  width: 38px;
-  height: 22px;
+  width: 40px;
+  height: 23px;
   display: inline-block;
   flex-shrink: 0;
 }
+
 .toggle input {
   opacity: 0;
   width: 0;
   height: 0;
 }
+
 .toggle-track {
   position: absolute;
   inset: 0;
@@ -284,11 +303,12 @@
   transition: background 0.2s;
   cursor: pointer;
 }
+
 .toggle-track::before {
   content: "";
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   left: 3px;
   top: 3px;
   background: #fff;
@@ -296,73 +316,84 @@
   transition: transform 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
+
 .toggle input:checked + .toggle-track {
   background: var(--accent);
 }
+
 .toggle input:checked + .toggle-track::before {
-  transform: translateX(16px);
+  transform: translateX(17px);
 }
 
-/* Source config (edit form) */
 .src-config {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
   border-top: 1px dashed var(--border);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.6rem;
 }
 
 .src-config select,
 .src-config input[type="text"] {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   color: var(--text);
-  padding: 0.4rem 0.5rem;
+  padding: 0.65rem 0.8rem;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
 }
 
 .src-config-actions {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.15rem;
+  gap: 0.6rem;
+  margin-top: 0.1rem;
 }
 
-/* Sync footer */
 .src-footer {
-  margin-top: 0.8rem;
+  margin-top: 1rem;
 }
 
-/* Muted utility */
 .muted {
   color: var(--muted);
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+@media (max-width: 960px) {
+  .settings-nav {
+    width: 200px;
+  }
+
+  .settings-detail {
+    padding: 1.35rem 1.4rem 1.8rem;
+  }
+}
+
+@media (max-width: 720px) {
   .settings-shell {
     flex-direction: column;
   }
+
   .settings-nav {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 0.7rem 0;
+    padding-bottom: 1rem;
   }
+
   .settings-nav ul {
     display: flex;
-    gap: 0;
+    flex-wrap: wrap;
+    gap: 0.35rem;
   }
+
+  .settings-nav li + li {
+    margin-top: 0;
+  }
+
   .settings-nav li button {
-    border-left: none;
-    border-bottom: 2px solid transparent;
-    text-align: center;
-  }
-  .settings-nav li button.active {
-    border-bottom-color: var(--accent);
-    border-left-color: transparent;
+    width: auto;
+    min-width: 0;
   }
 }
