@@ -19,27 +19,27 @@ describe("sanitizeFtsQuery", () => {
     assert.equal(sanitizeFtsQuery("hello"), '"hello"');
   });
 
-  it("wraps multiple tokens in a single phrase", () => {
-    assert.equal(sanitizeFtsQuery("hello world"), '"hello world"');
+  it("joins multiple tokens with AND", () => {
+    assert.equal(sanitizeFtsQuery("hello world"), '"hello" AND "world"');
   });
 
   it("collapses multiple spaces", () => {
-    assert.equal(sanitizeFtsQuery("  hello   world  "), '"hello world"');
+    assert.equal(sanitizeFtsQuery("  hello   world  "), '"hello" AND "world"');
   });
 
   it("strips FTS5 operators and special chars", () => {
-    assert.equal(sanitizeFtsQuery('hello* AND "world"'), '"hello AND world"');
+    assert.equal(sanitizeFtsQuery('hello* AND "world"'), '"hello" AND "AND" AND "world"');
   });
 
   it("strips parentheses and braces", () => {
-    assert.equal(sanitizeFtsQuery("(foo) {bar} [baz]"), '"foo bar baz"');
+    assert.equal(sanitizeFtsQuery("(foo) {bar} [baz]"), '"foo" AND "bar" AND "baz"');
   });
 
   it("handles mixed special chars and valid tokens", () => {
-    assert.equal(sanitizeFtsQuery("@user: check #this!"), '"user check this"');
+    assert.equal(sanitizeFtsQuery("@user: check #this!"), '"user" AND "check" AND "this"');
   });
 
   it("handles unicode text", () => {
-    assert.equal(sanitizeFtsQuery("你好 世界"), '"你好 世界"');
+    assert.equal(sanitizeFtsQuery("你好 世界"), '"你好" AND "世界"');
   });
 });

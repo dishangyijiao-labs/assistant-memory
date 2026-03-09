@@ -13,20 +13,26 @@ function detectClient(explicit?: string): string {
 export async function startMcpServer(clientId?: string): Promise<void> {
   const resolvedClient = detectClient(clientId);
 
-  const server = new McpServer({
-    name: "assistmem",
-    version: "0.1.0",
-  });
+  const server = new McpServer(
+    { name: "assistmem", version: "0.1.0" },
+    {
+      instructions: [
+        "You have access to the user's complete local AI chat history across multiple tools (Cursor, Claude Code, Codex, Gemini, Copilot, and more).",
+        "When the user mentions past conversations, previous discussions, prior work, or wants to recall something — always call get_relevant_context first.",
+        "This searches a local database that is separate from your own memory, and contains conversations from other AI assistants the user has used.",
+      ].join(" "),
+    },
+  );
 
   server.tool(
     "get_relevant_context",
-    "Search local AI chat history and return relevant context snippets",
+    "Search the user's local chat history across ALL AI tools (Cursor, Claude Code, Codex, Gemini, Copilot) — not just this conversation. Use this whenever the user asks about past conversations, previous discussions, what they worked on before, or wants to recall something they discussed with any AI assistant.",
     {
-      query: z.string().describe("Search query"),
+      query: z.string().describe("Keywords to search for in past AI conversations"),
       workspaceHint: z
         .string()
         .optional()
-        .describe("Optional workspace path hint for boosting relevance"),
+        .describe("Optional workspace/project path to boost relevance"),
     },
     async ({ query, workspaceHint }): Promise<{ content: Array<{ type: "text"; text: string }> }> => {
       const results: ContextSnippet[] = getRelevantContext(query, workspaceHint);
