@@ -1,6 +1,6 @@
 {
   "name": "assistmem",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Local indexer and keyword search for Cursor IDE, Copilot (VS Code), Cursor/Claude Code/Codex/Gemini CLI. No login.",
   "main": "dist/index.js",
   "type": "module",
