@@ -99,8 +99,8 @@ jobs:
 
       - name: Write API key for notarization
         run: |
-          mkdir -p ~/.private_keys
-          echo "${{ secrets.APPLE_API_PRIVATE_KEY }}" > ~/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          mkdir -p /Users/runner/.private_keys
+          echo "${{ secrets.APPLE_API_PRIVATE_KEY }}" > /Users/runner/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
 
       - name: Build app bundle
         run: npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target aarch64-apple-darwin --bundles app,dmg --ci
@@ -109,9 +109,9 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_KEY: ~/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_PATH: /Users/runner/.private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
 
       - name: Upload DMG to Release
         if: startsWith(github.ref, 'refs/tags/')
