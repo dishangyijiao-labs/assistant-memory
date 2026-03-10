@@ -34,7 +34,8 @@
     "mac": "npm run build && npm run desktop:prepare && npm run desktop:dev",
     "mac:build": "npm run build && npm run desktop:prepare && npm run desktop:build",
     "mac:release": "npm run build && npm run desktop:prepare && npx @tauri-apps/cli@latest build --target aarch64-apple-darwin --bundles app,dmg --no-sign --ci",
-    "desktop:clean": "cd src-tauri && cargo clean"
+    "desktop:clean": "cd src-tauri && cargo clean",
+    "version": "node scripts/sync-version.mjs"
   },
   "keywords": [
     "cursor",
