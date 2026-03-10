@@ -59,9 +59,8 @@ export function searchMessages(
   source?: Source
 ): MessageResult[] {
   const database = getDb();
-  const ftsQuery = sanitizeFtsQuery(query);
   const whereSource = source ? "AND s.source = ?" : "";
-  const stmt = database.prepare(`
+  const sql = `
     SELECT
       m.id AS message_id,
       snippet(messages_fts, 0, '**', '**', '…', 32) AS snippet,
@@ -76,9 +75,22 @@ export function searchMessages(
     WHERE messages_fts MATCH ? ${whereSource}
     ORDER BY s.last_at DESC
     LIMIT ?
-  `);
-  const params: Array<string | number> = [ftsQuery];
-  if (source) params.push(source);
-  params.push(limit);
-  return stmt.all(...params) as MessageResult[];
+  `;
+  const stmt = database.prepare(sql);
+
+  // Try AND first for precise results
+  const ftsAnd = sanitizeFtsQuery(query, "and");
+  const paramsAnd: Array<string | number> = [ftsAnd];
+  if (source) paramsAnd.push(source);
+  paramsAnd.push(limit);
+  const andResults = stmt.all(...paramsAnd) as MessageResult[];
+  if (andResults.length > 0) return andResults;
+
+  // Fallback to OR for broader recall
+  const ftsOr = sanitizeFtsQuery(query, "or");
+  if (ftsOr === ftsAnd) return andResults; // single token, no point retrying
+  const paramsOr: Array<string | number> = [ftsOr];
+  if (source) paramsOr.push(source);
+  paramsOr.push(limit);
+  return stmt.all(...paramsOr) as MessageResult[];
 }

@@ -42,4 +42,12 @@ describe("sanitizeFtsQuery", () => {
   it("handles unicode text", () => {
     assert.equal(sanitizeFtsQuery("你好 世界"), '"你好" AND "世界"');
   });
+
+  it("joins multiple tokens with OR when mode is or", () => {
+    assert.equal(sanitizeFtsQuery("hello world", "or"), '"hello" OR "world"');
+  });
+
+  it("single token is the same in both modes", () => {
+    assert.equal(sanitizeFtsQuery("hello", "or"), '"hello"');
+  });
 });
