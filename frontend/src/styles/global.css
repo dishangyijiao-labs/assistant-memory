@@ -32,6 +32,11 @@ body,
   height: 100%;
 }
 
+/* Account for macOS overlay title bar (traffic lights) */
+.session-page {
+  padding-top: 28px;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;

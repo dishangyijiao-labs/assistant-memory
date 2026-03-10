@@ -13,36 +13,37 @@
 }
 
 .settings-nav {
-  width: 220px;
+  width: 180px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
-  padding: 1.4rem 0 1.2rem;
-  background: #fbfbfa;
+  padding: 0.5rem 0 1rem;
+  background: var(--sidebar-bg);
 }
 
 .settings-home-link {
   width: 100%;
   border: none;
   background: transparent;
-  padding: 0 1.4rem 1.3rem;
+  padding: 5px 12px 6px;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.3rem;
   color: var(--text);
   font: inherit;
-  font-size: 1.55rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
+  transition: color 0.12s;
 }
 
 .settings-home-link:hover {
-  color: var(--text);
+  color: var(--accent);
 }
 
 .settings-home-caret {
   color: var(--muted);
-  font-size: 1.8rem;
+  font-size: 1.1rem;
   line-height: 1;
   margin-top: -0.05em;
 }
@@ -50,11 +51,11 @@
 .settings-nav ul {
   list-style: none;
   margin: 0;
-  padding: 0 0.75rem;
+  padding: 0;
 }
 
 .settings-nav li + li {
-  margin-top: 0.15rem;
+  margin-top: 0;
 }
 
 .settings-nav li button {
@@ -62,24 +63,26 @@
   width: 100%;
   text-align: left;
   border: none;
-  border-radius: 10px;
+  border-radius: 0;
+  border-left: 2px solid transparent;
   background: transparent;
-  padding: 0.8rem 1rem;
+  padding: 5px 12px;
   font: inherit;
-  font-size: 0.94rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .settings-nav li button:hover {
-  background: #f1efe8;
+  background: var(--surface);
   color: var(--text);
 }
 
 .settings-nav li button.active {
-  background: #ebe7dc;
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
   color: var(--text);
 }
 
@@ -88,16 +91,16 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.55rem 2rem 2.2rem;
+  padding: 1.1rem 1.5rem 1.5rem;
   background: var(--sidebar-bg);
 }
 
 /* Shared panel */
 .panel-title {
-  margin: 0 0 1.25rem;
-  font-size: 1.6rem;
+  margin: 0 0 0.8rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .panel-loading {
@@ -115,10 +118,10 @@
 /* Shared button */
 .s-btn {
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   background: #fff;
@@ -160,8 +163,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 0;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
 }
 
 .mcp-row + .mcp-row {
@@ -169,7 +172,7 @@
 }
 
 .mcp-row-label {
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
@@ -181,7 +184,7 @@
 }
 
 .mcp-readiness {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--muted);
 }
 
@@ -202,9 +205,9 @@
 .mcp-test {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
-  padding-top: 1.3rem;
+  padding-top: 0.8rem;
 }
 
 .mcp-test-result {
@@ -229,8 +232,8 @@
 .src-row {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
 }
 
 .src-row.off {
@@ -245,7 +248,7 @@
 }
 
 .src-name {
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
@@ -362,11 +365,11 @@
 
 @media (max-width: 960px) {
   .settings-nav {
-    width: 200px;
+    width: 160px;
   }
 
   .settings-detail {
-    padding: 1.35rem 1.4rem 1.8rem;
+    padding: 1rem 1.2rem 1.5rem;
   }
 }
 
@@ -395,5 +398,7 @@
   .settings-nav li button {
     width: auto;
     min-width: 0;
+    border-left: none;
+    border-radius: 6px;
   }
 }
