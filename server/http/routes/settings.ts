@@ -95,7 +95,8 @@ export async function handleSyncSource(req: IncomingMessage, res: ServerResponse
 export async function handleGetModel(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   const settings = db.getModelSettings();
   const hasApiKey = Boolean(resolveModelApiKey(settings));
-  sendJson(res, 200, { settings, has_api_key: hasApiKey });
+  const { api_key: _omit, ...safeSettings } = settings;
+  sendJson(res, 200, { settings: safeSettings, has_api_key: hasApiKey });
 }
 
 export async function handleUpdateModel(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -117,7 +118,8 @@ export async function handleUpdateModel(req: IncomingMessage, res: ServerRespons
   }
   const settings = db.updateModelSettings(patch);
   const hasApiKey = Boolean(resolveModelApiKey(settings));
-  sendJson(res, 200, { settings, has_api_key: hasApiKey });
+  const { api_key: _omit, ...safeSettings } = settings;
+  sendJson(res, 200, { settings: safeSettings, has_api_key: hasApiKey });
 }
 
 export async function handleTestModel(req: IncomingMessage, res: ServerResponse): Promise<void> {
