@@ -44,7 +44,7 @@ function writeJsonConfig(path: string, data: Record<string, unknown>): void {
 function claudeDesktopDetect(): boolean {
   const config = readJsonConfig(claudeDesktopConfigPath());
   const servers = config.mcpServers as Record<string, unknown> | undefined;
-  return servers != null && ASSISTMEM_SERVER_KEY in servers;
+  return servers !== undefined && servers !== null && ASSISTMEM_SERVER_KEY in servers;
 }
 
 function claudeDesktopInstall(): void {
