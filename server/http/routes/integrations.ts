@@ -150,6 +150,6 @@ export async function handleMcpTest(_req: IncomingMessage, res: ServerResponse):
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Test failed";
-    sendJson(res, 200, { ok: false, message });
+    sendError(res, 500, "MCP_TEST_FAILED", message);
   }
 }
